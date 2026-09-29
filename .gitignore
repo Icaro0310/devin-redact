@@ -10,3 +10,10 @@ build/
 *.db
 *.db-shm
 *.db-wal
+
+# Local session state — never committed
+.devin/memory/
+
+# Test fixtures are committed on purpose (all secrets are planted fakes)
+!tests/fixtures/.env
+!tests/fixtures/*.db

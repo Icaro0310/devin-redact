@@ -1,0 +1,4 @@
+This is a benign fixture with no secrets and no personal data.
+It talks about cooking: pasta, basil, tomatoes, olive oil.
+A second paragraph discusses weekend hiking plans and the weather.
+Numbers like 12345 and words like configuration are fine here.

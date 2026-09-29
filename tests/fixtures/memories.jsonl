@@ -1,0 +1,5 @@
+{"type":"memory","content":"User said the deploy key is gho_FAKE00000000000000000000 — treat as fake","created_at":1700000000}
+{"type":"memory","content":"Contact: fake.user@example.com for the demo tenant","created_at":1700000001}
+{"type":"memory","content":"Authorization: Bearer eyJhbGciOiJGQUtFIiwidHlwIjoiRkFLRSJ9.ZmFrZS5wYXlsb2FkLmZha2U.c2lnbmF0dXJlLWZha2Utc2ln","created_at":1700000002}
+{"type":"memory","content":"Workspace lives at /home/fakeuser/devin-demo","created_at":1700000003}
+{"type":"memory","content":"Nothing sensitive: prefers dark mode and pytest -q","created_at":1700000004}
