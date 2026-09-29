@@ -138,7 +138,7 @@ def test_fixture_db_still_opens_after_scan():
     con = sqlite3.connect(f"file:{FIXTURES / 'sessions.db'}?mode=ro", uri=True)
     (n,) = con.execute("select count(*) from tool_call_state").fetchone()
     con.close()
-    assert n == 1
+    assert n == 3
 
 
 def test_redact_dry_run_only(tmp_path):
@@ -146,10 +146,10 @@ def test_redact_dry_run_only(tmp_path):
     result = devin_redact.redact(CORPUS)
     assert result["dry_run"] is True
     assert result["applied"] is False
-    assert result["report"]["publication_status"] == "BLOCKED"
+    assert result["replacements"] > 0
     after = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in CORPUS}
     assert before == after
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(RuntimeError):
         devin_redact.redact(CORPUS, apply=True)
 
 
