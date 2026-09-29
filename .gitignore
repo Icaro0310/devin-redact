@@ -12,7 +12,7 @@ build/
 *.db-wal
 
 # Local session state — never committed
-.devin/memory/
+.devin/
 
 # Test fixtures are committed on purpose (all secrets are planted fakes)
 !tests/fixtures/.env
