@@ -24,14 +24,19 @@ def _build_parser() -> argparse.ArgumentParser:
         p.add_argument("--report", type=Path, default=None, help="also write the JSON report to this file")
 
     _add_target_args(sub.add_parser("scan", help="read-only scan, prints a JSON report"))
-    redact_p = sub.add_parser("redact", help="redact findings (dry-run only in M1)")
+
+    redact_p = sub.add_parser("redact", help="redact findings (dry-run by default)")
     _add_target_args(redact_p)
+    redact_p.add_argument("--apply", action="store_true", help="actually write redactions")
     redact_p.add_argument(
-        "--apply",
+        "--i-know-this-is-irreversible",
         action="store_true",
-        help="actually redact in place (NOT implemented until M2)",
+        help="required with --apply (long flag, on purpose)",
     )
-    _add_target_args(sub.add_parser("verify", help="exit non-zero when publication is blocked (M2)"))
+
+    verify_p = sub.add_parser("verify", help="publication gate — non-zero exit unless CLEAN")
+    verify_p.add_argument("paths", nargs="+", type=Path, help="files or directories to verify")
+    verify_p.add_argument("--json", action="store_true", help="print the full JSON report")
     return parser
 
 
@@ -50,19 +55,38 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "redact":
-        if args.apply:
+        if args.apply and not args.i_know_this_is_irreversible:
             print(
-                "devin-redact: --apply is not implemented in M1 "
-                "(in-place SQLite redaction ships in M2)",
+                "devin-redact: --apply requires --i-know-this-is-irreversible",
                 file=sys.stderr,
             )
             return 3
-        _emit(engine.redact(args.paths), args.report)
-        return 0
+        try:
+            result = engine.redact(
+                args.paths,
+                apply=args.apply,
+                confirm_irreversible=args.i_know_this_is_irreversible,
+            )
+        except RuntimeError as exc:
+            print(f"devin-redact: {exc}", file=sys.stderr)
+            return 3
+        _emit(result, args.report)
+        return 0 if result.get("applied_ok", True) else 1
 
     if args.command == "verify":
-        print("devin-redact: verify is not implemented yet (planned for M2)", file=sys.stderr)
-        return 3
+        report = engine.scan(args.paths)
+        if args.json:
+            _emit(report, None)
+        else:
+            print(f"PUBLICATION STATUS: {report['publication_status']}")
+            print(
+                f"{report['files_scanned']} file(s) scanned, "
+                f"{report['findings_total']} finding(s) "
+                f"({report['secrets']} secret-class)"
+            )
+            for cat, n in report["by_category"].items():
+                print(f"  {cat}: {n}")
+        return 0 if report["publication_status"] == "CLEAN" else 1
 
     return 2
 
