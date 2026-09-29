@@ -40,10 +40,16 @@ ideia; não reinventa a roda.
 3. **Uma frase:** *é o único limpador que entende os comandos que correram e
    limpa a base de dados, não só o texto.*
 
-Em M1 a camada semântica é ao nível da deteção: o `scan` abre a DB em modo
-read-only, descodifica os payloads `tool_call_json` /
-`tool_call_update_json` / `chat_message` e encontra segredos nos inputs *e*
-nos outputs das tools. A redação in-place dessas células chega em M2.
+O `scan` abre a DB em modo read-only, descodifica os payloads
+`tool_call_json` / `tool_call_update_json` / `chat_message` e encontra
+segredos nos inputs *e* nos outputs das tools. Por cima dos padrões, a
+camada semântica lê `tool_call_state.rawInput`: quando o comando tocou um
+ficheiro sensível conhecido (`cat .env`, `type credentials.toml`, uma tool
+de leitura apontada a `~/.ssh/…`), o seu output é marcado como
+`kind="semantic-context"` mesmo quando nenhum padrão corresponde. O
+`redact` reescreve essas células in-place — mascaradas como
+`<REDACTED:sha256prefix>` — mantendo o JSON válido, dentro de uma única
+transação com backup `.bak` obrigatório e teste de abertura pós-redação.
 
 ## Instalação
 
@@ -67,8 +73,15 @@ devin-redact scan caminho/para/sessions.db exports/ .env
 # Igual, mas também grava o relatório num ficheiro
 devin-redact scan sessions.db --report report.json
 
-# Redact em dry-run (M1: nunca modifica nada)
+# Redact em dry-run — mostra exatamente o que mudaria, não modifica nada
 devin-redact redact sessions.db
+
+# Redact in-place (flag longa de propósito; grava backups .bak primeiro)
+devin-redact redact sessions.db --apply --i-know-this-is-irreversible
+
+# Gate de publicação: exit 0 só quando CLEAN, senão 1
+devin-redact verify sessions.db exports/
+devin-redact verify sessions.db --json
 ```
 
 Formato do relatório (determinístico — mesmo input, mesmo output):
@@ -106,9 +119,18 @@ de utilizador (`C:\Users\…`, `/home/…`, `/Users/…`).
 - **Não é preventivo.** Encontra segredos *depois* de aterrarem no
   transcript. Impedir o agente de ler segredos é trabalho de policy, não de
   redação.
-- **Escopo M1.** `scan` funciona hoje; `redact` é só dry-run (redação
-  in-place em SQLite com backup + transação chega em M2); `verify` está
-  stubado.
+- **Redação é destrutiva por desenho.** `--apply` grava sempre um `.bak`
+  irmão primeiro e as escritas na DB correm numa transação única com teste
+  de abertura pós-redação — mas depois de publicares/partilhares uma árvore
+  sem `.bak`, os segredos que lá estavam são a única cópia. Guarda os
+  backups em segurança.
+- **A camada semântica é heurística.** A tabela de ficheiros sensíveis
+  cobre nomes comuns (`.env*`, `credentials*`, `*.pem`, `~/.ssh`, `~/.aws`,
+  …); um ficheiro com segredos e nome incomum lido via `cat` não é marcado
+  — os padrões continuam a aplicar-se ao output.
+- **Escopo M2.** `scan`, `redact` e `verify` funcionam. Ainda fora:
+  integração `devin-history`, publicação PyPI, hook `SessionEnd`, skill
+  `/redact`.
 
 ## Licença
 

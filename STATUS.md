@@ -1,52 +1,63 @@
 # STATUS
 
-## Milestone M1 — done (2026-09-29)
+## Milestone M2 — done (2026-09-29)
 
-- `docs/SPEC.md` — canonical EN translation of `SPEC.pt-BR.md`.
-- `README.md` + `README.pt-BR.md` — real content: problem (with the
-  pairing-code evidence), prior art (geheim / agent-leaks / AgentLogs),
-  the Devin-native differentiator (3 tests), usage, and a Limitations
-  section that declares false negatives.
-- `tests/fixtures/` — planted-secret corpus, all synthetic:
-  - `sessions.db` — mirrors the real schema (`sessions`, `message_nodes`,
-    `tool_call_state`, `prompt_history`, `app_state`,
-    `refinery_schema_history`); contains a `cat .env` tool call whose
-    `tool_call_update_json` output holds fake secrets, a chat message with
-    a fake `sk-` key + email, and a pairing code in `prompt_history`.
-    Regenerate with `python tests/fixtures/generate_sessions_db.py`
-    (deterministic, committed alongside the DB).
-  - `memories.jsonl`, `export.md`, `.env`, `benign.txt`.
-  - `.gitignore` has explicit `!tests/fixtures/…` exceptions for `.env`
-    and `*.db`.
-- `src/devin_redact/patterns.py` — API keys, bearer/JWT, GitHub tokens,
-  PEM private keys, `.env` assignments, Devin pairing codes (context
-  required), emails, absolute user paths.
-- `src/devin_redact/engine.py` — `scan()` returns the SPEC §6 contract;
-  SQLite cells are scanned read-only, JSON cells are decoded leaf-wise so
-  multi-line tool output gets real newlines; `project_name` findings come
-  from `sessions.working_directory`. `redact()` is dry-run only
-  (`apply=True` raises `NotImplementedError`).
-- `src/devin_redact/cli.py` — thin argparse wrapper: `scan`, `redact`
-  (dry-run, `--apply` refused), `verify` stub.
-- Tests green: 12 passed on Windows (Python 3.11). Recall verified via
-  sha256 fingerprints of every planted value; benign file yields zero
-  findings; scan is idempotent and read-only (file hashes unchanged, DB
-  still opens).
+- `src/devin_redact/semantic.py` — tool-call semantic layer. Parses
+  `tool_call_state.tool_call_json` `rawInput`; when `kind == "execute"`
+  requires a read-verb token (`cat`, `type`, `grep`, `rg`, `Get-Content`,
+  …) plus a sensitive-path token; non-shell tool calls are flagged via
+  `rawInput.path`/`query`. Sensitivity table: basenames (`.env*`,
+  `.netrc`, `id_*`, `credentials*`, `mcp_config.json`, `secrets.*`, …),
+  suffixes (`.pem`, `.key`, `.p12`, `.kdbx`, …) and dir segments
+  (`.ssh`, `.aws`, `.gnupg`, `.docker`, `.kube`, `.azure`).
+  Flagged outputs surface as findings with `kind="semantic-context"` and
+  `category="sensitive_tool_output"` (blocks publication).
+- `engine.redact()` — real implementation:
+  - Secret spans → `<REDACTED:sha256prefix>` (fp = first 16 hex of the
+    sha256 of the matched value; matches the scan-report fingerprint).
+  - `env_assignment` keeps the `NAME=` prefix so redacted dotfiles stay
+    readable.
+  - JSON cells are decoded and rewritten leaf-wise — structure stays
+    valid. Semantically-flagged tool outputs are wholesale-redacted
+    inside `content` subtrees while structural keys
+    (`type`, `mimeType`, `toolCallId`, `status`, `kind`) are preserved.
+  - Write safety: dry-run by default; `apply` requires
+    `confirm_irreversible` (CLI: `--apply --i-know-this-is-irreversible`);
+    every modified file gets a `<name>.bak` sibling; DB updates run in a
+    single transaction; post-redact reopen + `PRAGMA integrity_check`,
+    restoring the backup on failure.
+  - Idempotent: `<REDACTED:…>` tags are skipped by both `scan` and
+    `redact` (re-running reports zero replacements).
+- CLI `verify` — exit 0 only when `CLEAN`, else 1 with
+  `PUBLICATION STATUS: …` + per-category summary; `--json` emits the full
+  scan report.
+- Fixtures: `sessions.db` regenerated with `tc-fixture-0002`
+  (`cat .env` → output with NO pattern-shaped secret — only the semantic
+  layer flags it) and `tc-fixture-0003` (`ls -la`, negative control).
+- Tests: 23 green on Windows / Python 3.11 — redact-on-copy (DB opens,
+  planted fingerprints gone, `verify` → 0), induced-failure rollback,
+  semantic flagging/negative control, verify exit codes, idempotency.
 
-## Remaining for M2
+## Done criteria check
 
-- **In-place SQLite redaction** — masked rewrite of matched cells with
-  mandatory backup + single transaction + post-redact open test; only ever
-  on a copy unless `--apply --i-know-this-is-irreversible` long flags.
-- **Tool-call semantic layer** — use `rawInput` (e.g. `cat .env`,
-  `grep` over sensitive files) to flag the *associated* tool output for
-  redaction even when the output itself matches no pattern.
-- **`verify` subcommand** — exit non-zero / `PUBLICATION STATUS: BLOCKED`
-  gate for pre-publish checks.
-- Golden-file test for the report; Unicode/encoding edge cases;
-  Windows-path edge cases beyond the current corpus.
-- `devin-history` integration (export with `--redact` by default), PyPI
-  publish, optional `SessionEnd` hook + `/redact` skill.
+- `python -m pytest` — 23 passed.
+- `verify` on dirty fixture → exit 1 (`PUBLICATION STATUS: BLOCKED`).
+- `verify` on a redacted copy → exit 0 (`CLEAN`).
+
+## Remaining for M3
+
+- `devin-history` integration (export with `--redact` by default).
+- PyPI publish (`pipx install devin-redact`).
+- Optional `SessionEnd` hook + `/redact` skill.
+- Candidates/edges noted during M2:
+  - `chat_message` `metadata.extensions.chisel/tool_call_content.*` also
+    embeds `rawInput`/`status` in the real store — the semantic layer only
+    reads `tool_call_state` today.
+  - Golden-file report test; Unicode/encoding edge cases; more
+    Windows-path shapes (`%USERPROFILE%`, UNC).
+  - `.bak` files keep the original secrets — verify scanning a directory
+    that contains `.bak` files will still flag them (expected; document
+    for users or add a `--ignore-backups` option).
 
 ## Blockers
 
@@ -54,15 +65,11 @@ None.
 
 ## Notes / decisions
 
-- `publication_status` semantics: `BLOCKED` if any secret-class finding,
-  `REVIEW` if only PII/hygiene findings, `CLEAN` otherwise. The SPEC JSON
-  only shows `BLOCKED`; the extra states are additive.
-- Findings never contain the secret — only a masked `preview` and a
-  sha256 `fingerprint` (16 hex), which also powers the recall tests.
-- The real `%APPDATA%\devin\cli\sessions.db` was only ever opened
-  read-only to inspect *schema and JSON key paths*. No row content was
-  copied; every fixture secret is fabricated (`sk-FAKE…`, `hunter2fake`,
-  `ghp_FAKE…`, etc.).
-- Pairing-code detection requires explicit context (`pairing code:`) —
-  the bare code shape was judged too prone to false positives.
-- `.devin/memory/` added to `.gitignore` (local session state).
+- `verify` is strict: any finding (secret-class or PII/hygiene) exits 1.
+  Rationale: it's a publication gate — publishable trees should be
+  `CLEAN`, not merely "no secrets".
+- Semantic flagging fires on `tool_call_state` rows even when the output
+  already contains pattern matches (tc-fixture-0001 is both). Dedup of
+  pattern vs. semantic findings on the same cell is by category+fingerprint,
+  so no double-count of the same secret value.
+- `sensitive_tool_output` counts as a secret-class (blocking) category.

@@ -37,10 +37,16 @@ does not reinvent it.
 3. **One sentence:** *it's the only cleaner that understands which commands
    ran and cleans the database, not just the text.*
 
-In M1 the semantic layer is detection-level: `scan` opens the DB read-only,
-decodes `tool_call_json` / `tool_call_update_json` / `chat_message` payloads
-and finds secrets inside tool inputs *and* outputs. In-place redaction of
-those cells lands in M2.
+`scan` opens the DB read-only, decodes `tool_call_json` /
+`tool_call_update_json` / `chat_message` payloads and finds secrets inside
+tool inputs *and* outputs. On top of pattern matching, the semantic layer
+reads `tool_call_state.rawInput`: when the command touched a known-sensitive
+file (`cat .env`, `type credentials.toml`, a read tool pointing at
+`~/.ssh/…`), its output is flagged as `kind="semantic-context"` even when
+the output matches no pattern. `redact` rewrites those cells in place —
+masked as `<REDACTED:sha256prefix>` — keeping the JSON valid, inside a
+single transaction with a mandatory `.bak` backup and a post-redact open
+test.
 
 ## Install
 
@@ -64,8 +70,15 @@ devin-redact scan path/to/sessions.db exports/ .env
 # Same, plus write the report to a file
 devin-redact scan sessions.db --report report.json
 
-# Dry-run redact (M1: never modifies anything)
+# Dry-run redact — shows exactly what would change, modifies nothing
 devin-redact redact sessions.db
+
+# In-place redact (long flag on purpose; writes .bak backups first)
+devin-redact redact sessions.db --apply --i-know-this-is-irreversible
+
+# Publication gate: exit 0 only when CLEAN, else 1
+devin-redact verify sessions.db exports/
+devin-redact verify sessions.db --json
 ```
 
 Report shape (deterministic — same input, same output):
@@ -101,8 +114,17 @@ user paths (`C:\Users\…`, `/home/…`, `/Users/…`).
   still reduce recall.
 - **Not preventive.** It finds secrets *after* they landed in the transcript.
   Stopping the agent from reading secrets is policy work, not redaction work.
-- **M1 scope.** `scan` works today; `redact` is dry-run only (in-place SQLite
-  redaction with backup + transaction ships in M2); `verify` is stubbed.
+- **Redaction is destructive by design.** `--apply` always writes a `.bak`
+  sibling first and DB updates run in one transaction with a post-redact
+  open test — but once you publish/share a `.bak`-less tree, the secrets
+  that were in it are the only copy. Keep backups safe.
+- **Semantic layer is heuristic.** The sensitive-file table covers common
+  names (`.env*`, `credentials*`, `*.pem`, `~/.ssh`, `~/.aws`, …); a
+  secret-bearing file with an unusual name read via `cat` will not be
+  flagged — pattern matching still applies to its output.
+- **M2 scope.** `scan`, `redact` and `verify` work. Still out:
+  `devin-history` integration, PyPI publish, `SessionEnd` hook, `/redact`
+  skill.
 
 ## License
 

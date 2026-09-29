@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-29
+
+### Added
+
+- `devin_redact.semantic`: tool-call semantic layer. Parses
+  `tool_call_state.tool_call_json` `rawInput` and flags the associated
+  `tool_call_update_json` output for redaction when the command/read
+  targets a known-sensitive file (`.env*`, `credentials*`, `*.pem`,
+  `~/.ssh`, `~/.aws`, …) — even when no pattern matches the output.
+  Findings carry `kind="semantic-context"`.
+- `engine.redact()` real implementation: replaces secret spans with
+  `<REDACTED:sha256prefix>` (keeping `KEY=` prefixes for `.env`
+  assignments), decodes/rewrites JSON cells leaf-wise so structure stays
+  valid, and wholesale-redacts output payloads of sensitive reads while
+  preserving structural keys (`type`, `mimeType`, `toolCallId`, …).
+- Write path safety: dry-run by default; in-place requires
+  `--apply --i-know-this-is-irreversible`; mandatory `.bak` sibling
+  backups; DB updates in a single transaction; post-redact open +
+  `integrity_check` with backup restore on failure.
+- CLI `verify`: exits 0 only when `CLEAN`, 1 otherwise with
+  `PUBLICATION STATUS: …` + per-category summary; `--json` for the full
+  report.
+- Idempotent redaction: `<REDACTED:…>` tags are never re-matched or
+  re-redacted; `scan` ignores already-redacted values.
+- Fixture corpus extended with a semantic-layer case (`cat .env` output
+  with no pattern-shaped secret) and a benign `ls -la` negative control.
+- Tests: redact-on-copy (DB still opens, planted fingerprints gone,
+  edits logged), transaction rollback on induced failure, semantic
+  flagging, `verify` exit codes both ways, text/JSON redaction
+  idempotency. 23 tests green.
+
 ## [0.1.0] - 2026-09-29
 
 ### Added
