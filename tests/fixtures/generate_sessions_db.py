@@ -114,6 +114,60 @@ TOOL_CALL_UPDATE = {
     ],
 }
 
+# Same sensitive read, but the output contains NO pattern-shaped secret —
+# only the semantic layer can flag it.
+TOOL_CALL_SEMANTIC = {
+    "toolCallId": "tc-fixture-0002",
+    "title": "cat .env",
+    "kind": "execute",
+    "rawInput": {"command": "cat .env", "shell_id": "sh-fixture-1"},
+    "locations": [{"path": ".env"}],
+    "content": [
+        {"type": "content", "content": {"type": "text", "text": "$ cat .env"}}
+    ],
+}
+
+TOOL_CALL_SEMANTIC_UPDATE = {
+    "toolCallId": "tc-fixture-0002",
+    "status": "completed",
+    "content": [
+        {
+            "type": "content",
+            "content": {
+                "type": "text",
+                "text": "feature_flag=enabled\nlog level is verbose\n",
+            },
+        }
+    ],
+}
+
+# Negative control: a benign shell command whose output must NOT be flagged
+# by the semantic layer.
+TOOL_CALL_BENIGN = {
+    "toolCallId": "tc-fixture-0003",
+    "title": "ls -la",
+    "kind": "execute",
+    "rawInput": {"command": "ls -la", "shell_id": "sh-fixture-1"},
+    "locations": [],
+    "content": [
+        {"type": "content", "content": {"type": "text", "text": "$ ls -la"}}
+    ],
+}
+
+TOOL_CALL_BENIGN_UPDATE = {
+    "toolCallId": "tc-fixture-0003",
+    "status": "completed",
+    "content": [
+        {
+            "type": "content",
+            "content": {
+                "type": "text",
+                "text": "total 3\ndrwxr-xr-x src\ndrwxr-xr-x tests\n",
+            },
+        }
+    ],
+}
+
 
 def main() -> None:
     if DB_PATH.exists():
@@ -155,6 +209,26 @@ def main() -> None:
             "tc-fixture-0001",
             json.dumps(TOOL_CALL, sort_keys=True),
             json.dumps(TOOL_CALL_UPDATE, sort_keys=True),
+        ),
+    )
+    con.execute(
+        "INSERT INTO tool_call_state (session_id, tool_call_id, "
+        "tool_call_json, tool_call_update_json) VALUES (?,?,?,?)",
+        (
+            SESSION_ID,
+            "tc-fixture-0002",
+            json.dumps(TOOL_CALL_SEMANTIC, sort_keys=True),
+            json.dumps(TOOL_CALL_SEMANTIC_UPDATE, sort_keys=True),
+        ),
+    )
+    con.execute(
+        "INSERT INTO tool_call_state (session_id, tool_call_id, "
+        "tool_call_json, tool_call_update_json) VALUES (?,?,?,?)",
+        (
+            SESSION_ID,
+            "tc-fixture-0003",
+            json.dumps(TOOL_CALL_BENIGN, sort_keys=True),
+            json.dumps(TOOL_CALL_BENIGN_UPDATE, sort_keys=True),
         ),
     )
     con.execute(
