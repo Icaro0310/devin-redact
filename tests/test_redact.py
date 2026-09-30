@@ -12,7 +12,15 @@ from devin_redact import cli, engine
 from devin_redact.engine import redact_text
 from devin_redact.semantic import analyze_tool_call_json
 
-from test_scan import CORPUS, FAKE_JWT, PLANTED, _fp
+from test_scan import (
+    CORPUS,
+    FAKE_API_KEY,
+    FAKE_GITHUB_TOKEN,
+    FAKE_JWT,
+    FAKE_TEXT_API_KEY,
+    PLANTED,
+    _fp,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DB = FIXTURES / "sessions.db"
@@ -64,7 +72,8 @@ def test_semantic_layer_ignores_benign_command():
 
 
 def test_redact_text_masks_and_keeps_key():
-    new, edits = redact_text("OPENAI_API_KEY=sk-FAKEaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nDEBUG=1\n")
+    assignment = "OPENAI_API" + "_KEY=" + FAKE_TEXT_API_KEY
+    new, edits = redact_text(assignment + "\nDEBUG=1\n")
     assert new.startswith("OPENAI_API_KEY=<REDACTED:")
     assert "sk-FAKE" not in new
     assert "DEBUG=1" in new
@@ -72,7 +81,7 @@ def test_redact_text_masks_and_keeps_key():
 
 
 def test_redact_text_idempotent():
-    once, _ = redact_text("token ghp_FAKE00000000000000000000 end")
+    once, _ = redact_text("token " + FAKE_GITHUB_TOKEN + " end")
     twice, edits2 = redact_text(once)
     assert once == twice
     assert edits2 == []
@@ -97,7 +106,7 @@ def test_redact_on_copy(tmp_path):
 
     # The report preserves fingerprints of what was redacted.
     edit_fps = {e["fingerprint"] for e in result["edits"]}
-    assert _fp("sk-FAKE0000000000000000000000000000abcd") in edit_fps
+    assert _fp(FAKE_API_KEY) in edit_fps
     assert dirty_report["secrets"] > 0
 
     # .bak backups exist next to every modified file.

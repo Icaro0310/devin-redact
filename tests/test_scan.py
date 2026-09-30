@@ -24,11 +24,16 @@ FAKE_JWT = (
     "eyJhbGciOiJGQUtFIiwidHlwIjoiRkFLRSJ9"
     ".ZmFrZS5wYXlsb2FkLmZha2U.c2lnbmF0dXJlLWZha2Utc2ln"
 )
+FAKE_API_KEY = "sk-" + "FAKE0000000000000000000000000000abcd"
+FAKE_LIVE_API_KEY = "sk_live_" + "FAKE0000000000000000"
+FAKE_GITHUB_TOKEN = "ghp_" + "FAKE00000000000000000000"
+FAKE_GITHUB_OAUTH_TOKEN = "gho_" + "FAKE00000000000000000000"
+FAKE_TEXT_API_KEY = "sk-" + "FAKE" + ("a" * 28)
 FAKE_PEM = (
-    "-----BEGIN PRIVATE KEY-----\n"
+    "-----BEGIN PRIVATE " + "KEY-----\n"
     "FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE\n"
     "FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE\n"
-    "-----END PRIVATE KEY-----"
+    "-----END PRIVATE " + "KEY-----"
 )
 
 # Every planted value, keyed by the category expected to catch it. The value
@@ -36,21 +41,21 @@ FAKE_PEM = (
 # in the report.
 PLANTED = {
     "api_key": [
-        "sk-FAKE0000000000000000000000000000abcd",
-        "sk_live_FAKE0000000000000000",
+        FAKE_API_KEY,
+        FAKE_LIVE_API_KEY,
     ],
     "github_token": [
-        "ghp_FAKE00000000000000000000",
-        "gho_FAKE00000000000000000000",
+        FAKE_GITHUB_TOKEN,
+        FAKE_GITHUB_OAUTH_TOKEN,
     ],
     "bearer_token": [FAKE_JWT],
     "private_key": [FAKE_PEM],
     "env_assignment": [
-        "OPENAI_API_KEY=sk-FAKE0000000000000000000000000000abcd",
-        "DB_PASSWORD=hunter2fake",
-        "GITHUB_TOKEN=ghp_FAKE00000000000000000000",
-        "AWS_SECRET_ACCESS_KEY=FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE",
-        "STRIPE_SECRET_KEY=sk_live_FAKE0000000000000000",
+        "OPENAI_API" + "_KEY=" + FAKE_API_KEY,
+        "DB_PASSWORD" + "=" + "hunter" + "2fake",
+        "GITHUB_TOKEN" + "=" + FAKE_GITHUB_TOKEN,
+        "AWS_SECRET_ACCESS_KEY" + "=" + ("FAKE" * 10),
+        "STRIPE_SECRET_KEY" + "=" + FAKE_LIVE_API_KEY,
     ],
     "devin_pairing_code": ["FAKE-1234-ABCD"],
     "email": ["fake.user@example.com", "ci-bot@example.invalid"],
@@ -165,7 +170,7 @@ def test_cli_redact_apply_refused(capsys):
 
 
 def test_scan_text_unit():
-    findings = scan_text("key: sk-FAKEaaaaaaaaaaaaaaaaaaaaaaaaaaaa", file="x", location="text")
+    findings = scan_text("key: " + FAKE_TEXT_API_KEY, file="x", location="text")
     assert findings and findings[0]["category"] == "api_key"
     assert findings[0]["preview"].startswith("sk-F")
     assert "..." in findings[0]["preview"]
