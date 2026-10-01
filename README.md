@@ -100,6 +100,12 @@ bearer tokens and JWTs, GitHub tokens (`ghp_`, `gho_`, `ghu_`, `ghs_`,
 sensitive variable names, Devin pairing codes, email addresses, and absolute
 user paths (`C:\Users\…`, `/home/…`, `/Users/…`).
 
+## Platform support
+
+Pure stdlib Python — identical behavior on Windows, Linux and macOS. CI runs
+the suite on `windows-latest` + `ubuntu-latest`; the target database is
+always an explicit argument, so there are no platform-specific paths.
+
 ## Limitations
 
 - **False negatives exist.** This is a pattern-based scanner, not a guarantee.

@@ -103,6 +103,13 @@ bearer tokens e JWTs, tokens GitHub (`ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`,
 variáveis sensíveis, códigos de pareamento Devin, emails e paths absolutos
 de utilizador (`C:\Users\…`, `/home/…`, `/Users/…`).
 
+## Suporte de plataformas
+
+Python stdlib puro — comportamento idêntico em Windows, Linux e macOS. O
+CI corre a suite em `windows-latest` + `ubuntu-latest`; a base de dados
+alvo é sempre um argumento explícito, sem paths específicos de
+plataforma.
+
 ## Limitações
 
 - **Falsos negativos existem.** É um scanner por padrões, não uma garantia.
