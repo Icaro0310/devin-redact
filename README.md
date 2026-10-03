@@ -50,8 +50,10 @@ test.
 
 ## Install
 
+Python ≥ 3.10 and `pipx` are required. **Windows (PowerShell):** install `pipx` with `py -m pip install --user pipx`, run `py -m pipx ensurepath`, then reopen the terminal. **Linux (Debian/Ubuntu):** run `sudo apt install pipx python3-venv` and `pipx ensurepath`; reopen the terminal. Other Linux distributions should install `pipx` using their package manager.
+
 ```bash
-pipx install devin-redact
+pipx install "devin-redact @ git+https://github.com/Icaro0310/devin-redact.git"
 ```
 
 For development:
@@ -99,6 +101,14 @@ bearer tokens and JWTs, GitHub tokens (`ghp_`, `gho_`, `ghu_`, `ghs_`,
 `ghr_`, `github_pat_`), PEM private keys, `.env`-style assignments to
 sensitive variable names, Devin pairing codes, email addresses, and absolute
 user paths (`C:\Users\…`, `/home/…`, `/Users/…`).
+
+## Works with Devin alone (Devin-only mode)
+
+The default `scan` is read-only and fully offline. `--apply` rewrites Devin's
+SQLite store in place — it writes `.bak` backups first, and running
+[`devin-backup`](https://github.com/Icaro0310/devin-backup) beforehand is the
+recommended extra safety net. Detection is heuristic: review the report
+before applying.
 
 ## Platform support
 

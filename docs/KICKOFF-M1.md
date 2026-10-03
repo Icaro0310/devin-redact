@@ -23,13 +23,13 @@ canonical English translation at `docs/SPEC.md`.
 
 The shape of the real store (schema ONLY, read-only, never copy row content):
 
-- `C:\Users\Utilizador\AppData\Roaming\devin\cli\sessions.db` — tables:
+- `%APPDATA%\devin\cli\sessions.db` — tables:
   `sessions`, `message_nodes` (`chat_message`, `metadata` JSON),
   `tool_call_state` (`tool_call_json` with `rawInput`/`locations`,
   `tool_call_update_json` with `status`), `app_state`,
   `refinery_schema_history`
 
-Python 3.11: `C:\Users\Utilizador\AppData\Local\Programs\Python\Python311\python.exe`.
+Python 3.11: ``py -3.11` (or `python` on PATH)`.
 This is Windows; mind console encoding.
 
 ## Milestone M1 scope (do exactly this, no more)

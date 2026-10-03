@@ -53,8 +53,10 @@ transação com backup `.bak` obrigatório e teste de abertura pós-redação.
 
 ## Instalação
 
+Requer Python ≥ 3.10 e `pipx`. **Windows (PowerShell):** instale `pipx` com `py -m pip install --user pipx`, execute `py -m pipx ensurepath` e reabra o terminal. **Linux (Debian/Ubuntu):** execute `sudo apt install pipx python3-venv` e `pipx ensurepath`; reabra o terminal. Noutras distribuições Linux, instale `pipx` pelo gestor de pacotes.
+
 ```bash
-pipx install devin-redact
+pipx install "devin-redact @ git+https://github.com/Icaro0310/devin-redact.git"
 ```
 
 Para desenvolvimento:
@@ -102,6 +104,14 @@ bearer tokens e JWTs, tokens GitHub (`ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`,
 `github_pat_`), chaves privadas PEM, assignments estilo `.env` para nomes de
 variáveis sensíveis, códigos de pareamento Devin, emails e paths absolutos
 de utilizador (`C:\Users\…`, `/home/…`, `/Users/…`).
+
+## Funciona só com o Devin (modo Devin-only)
+
+O `scan` default é somente-leitura e totalmente offline. O `--apply`
+reescreve a store SQLite do Devin in-place — grava backups `.bak` antes, e
+correr o [`devin-backup`](https://github.com/Icaro0310/devin-backup) antes
+disso é a rede de segurança recomendada. A deteção é heurística: revê o
+relatório antes de aplicar.
 
 ## Suporte de plataformas
 
