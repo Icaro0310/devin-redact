@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src="assets/banner.svg" alt="devin-redact" width="100%"/>
+
+</div>
+
 # devin-redact
 
 > **Projeto comunitário não oficial.** Sem afiliação, endosso ou patrocínio da
