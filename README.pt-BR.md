@@ -155,6 +155,29 @@ plataforma.
   integração `devin-history`, publicação PyPI, hook `SessionEnd`, skill
   `/redact`.
 
+## Quando usar
+
+- Você está prestes a partilhar ou publicar dados de sessões Devin — um export, um bug report, uma base demo — e precisa de limpar segredos e PII primeiro.
+- Você quer um gate pré-publicação: `devin-redact verify` sai com 0 apenas quando o alvo está `CLEAN`, por isso encaixa diretamente em CI.
+- Você precisa de redação dentro do próprio `sessions.db`, não só em texto exportado — ele reescreve as células SQLite no lugar.
+- Você quer achados que um scanner de regex simples não apanha: um tool call `cat .env` marca o seu output como sensível via `tool_call_state.rawInput` mesmo quando o output não corresponde a nenhum padrão.
+
+## Quando NÃO usar
+
+- Você precisa de garantia de que nenhum segredo sobrevive — scanning por padrões tem falsos negativos; corra `gitleaks`/`trufflehog` em paralelo.
+- Você quer impedir que segredos entrem nas transcrições em primeiro lugar — isso é trabalho de política de agente, não de redação.
+- Você não pode aceitar uma escrita destrutiva — `--apply` reescreve células no lugar; corra o [`devin-backup`](https://github.com/Icaro0310/devin-backup) primeiro e reveja o dry-run.
+
+## FAQ
+
+**O que é o devin-redact?** Um scanner e redator para os stores de sessões do Devin. `scan` lê `sessions.db` (e ficheiros exportados) em read-only e reporta segredos, emails, caminhos absolutos e nomes de projetos; `redact --apply` mascara os achados no lugar como `<REDACTED:sha256prefix>`; `verify` faz gate de publicação com um exit code.
+
+**É seguro correr o scan contra a minha base de dados viva?** Sim — `scan` abre a base read-only e nunca a modifica. Só `redact --apply` escreve, e cria primeiro um `.bak` irmão dentro de uma única transação com um teste de abertura pós-redação.
+
+**O que significa o veredito de publicação?** `publication_status` é `BLOCKED` quando existe qualquer achado de classe segredo, `REVIEW` quando só existem achados de PII/higiene, e `CLEAN` quando nada foi encontrado. `verify` sai 0 apenas em `CLEAN`. O relatório traz previews mascarados e fingerprints sha256 — nunca o segredo em si.
+
+**Ele apanha todos os segredos?** Não. É um scanner heurístico por padrões mais uma camada semântica para leituras de ficheiros sensíveis — formatos invulgares, encodings ou segredos divididos entre chunks serão perdidos. Trate-o como um forte complemento ao `gitleaks`/`trufflehog`, não como substituto.
+
 ## Licença
 
 MIT — vê [LICENSE](LICENSE).
