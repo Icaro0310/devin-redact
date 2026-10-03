@@ -148,6 +148,52 @@ always an explicit argument, so there are no platform-specific paths.
   `devin-history` integration, PyPI publish, `SessionEnd` hook, `/redact`
   skill.
 
+## When to use this
+
+- You are about to share or publish Devin session data — an export, a bug
+  report, a demo database — and need to scrub secrets and PII first.
+- You want a pre-publish gate: `devin-redact verify` exits 0 only when the
+  target is `CLEAN`, so it drops straight into CI.
+- You need redaction inside `sessions.db` itself, not just in exported
+  text — it rewrites the SQLite cells in place.
+- You want findings a flat regex scanner misses: a `cat .env` tool call
+  flags its output as sensitive via `tool_call_state.rawInput` even when
+  the output matches no pattern.
+
+## When NOT to use this
+
+- You need a guarantee that no secret survives — pattern-based scanning has
+  false negatives; run `gitleaks`/`trufflehog` alongside it.
+- You want to stop secrets from entering transcripts in the first place —
+  that is agent policy work, not redaction work.
+- You cannot accept a destructive write — `--apply` rewrites cells in
+  place; run [`devin-backup`](https://github.com/Icaro0310/devin-backup)
+  first and review the dry-run.
+
+## FAQ
+
+**What is devin-redact?** A scanner and redactor for Devin's session
+stores. `scan` reads `sessions.db` (and export files) read-only and reports
+secrets, emails, absolute paths and project names; `redact --apply` masks
+findings in place as `<REDACTED:sha256prefix>`; `verify` gates publication
+with an exit code.
+
+**Is scanning safe to run against my live database?** Yes — `scan` opens
+the database read-only and never modifies it. Only `redact --apply` writes,
+and it creates a `.bak` sibling first inside a single transaction with a
+post-redact open test.
+
+**What does the publication verdict mean?** `publication_status` is
+`BLOCKED` when any secret-class finding exists, `REVIEW` when only
+PII/hygiene findings exist, and `CLEAN` when nothing was found. `verify`
+exits 0 only on `CLEAN`. The report carries masked previews and sha256
+fingerprints — never the secret itself.
+
+**Will it catch every secret?** No. It is a heuristic, pattern-based
+scanner plus a semantic layer for sensitive-file reads — unusual formats,
+encodings or secrets split across chunks will be missed. Treat it as a
+strong complement to `gitleaks`/`trufflehog`, not a replacement.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

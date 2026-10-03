@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: devin-redact
+authors:
+  - family-names: Galvao
+    given-names: Icaro
+url: "https://github.com/Icaro0310/devin-redact"
+repository-code: "https://github.com/Icaro0310/devin-redact"
+license: MIT
+abstract: "Secret and PII redaction that understands Devin tool-call semantics: scans sessions.db and export files for leaked credentials, then rewrites them in place in SQLite."
+keywords: [devin, redaction, secrets, pii, security, sqlite]

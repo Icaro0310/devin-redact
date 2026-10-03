@@ -1,0 +1,31 @@
+# devin-redact
+
+> Secret and PII redaction that understands Devin tool-call semantics: scans `sessions.db` and export files for leaked credentials, then rewrites them in place in SQLite, not just flat text.
+
+devin-redact solves the problem that agent transcripts accumulate secrets (a `cat .env` in tool output, keys pasted into chat, tokens inside error messages) and that sharing or publishing those sessions leaks credentials. Unlike JSONL-oriented redactors for Claude Code/Codex logs, it reads and writes Devin's SQLite stores directly, decoding `tool_call_json`, `tool_call_update_json` and `chat_message` payloads, and its semantic layer reads `tool_call_state.rawInput`: when a command touched a known-sensitive file (`cat .env`, `~/.ssh/...`), the output is flagged even when it matches no pattern. `scan` is read-only and emits a deterministic JSON report with a `publication_status` verdict (BLOCKED/REVIEW/CLEAN); `redact --apply` masks findings as `<REDACTED:sha256prefix>` inside one transaction with a mandatory `.bak` backup; `verify` is a CI-style gate that exits 0 only when CLEAN. Unofficial community tooling, not affiliated with Cognition AI.
+
+## Docs
+
+- [README](https://github.com/Icaro0310/devin-redact/blob/main/README.md): full documentation
+- [SPEC](https://github.com/Icaro0310/devin-redact/blob/main/docs/SPEC.md): report contract and detection categories
+
+## Key commands
+
+- `pipx install "devin-redact @ git+https://github.com/Icaro0310/devin-redact.git"`: install (Python >= 3.10, pure stdlib)
+- `devin-redact scan path/to/sessions.db exports/ .env`: read-only scan, prints the JSON report
+- `devin-redact scan sessions.db --report report.json`: same, plus write the report to a file
+- `devin-redact redact sessions.db`: dry-run redact, shows exactly what would change, modifies nothing
+- `devin-redact redact sessions.db --apply --i-know-this-is-irreversible`: in-place redact (writes `.bak` backups first)
+- `devin-redact verify sessions.db exports/`: publication gate; exit 0 only when CLEAN, else 1 (`--json` available)
+
+## When to use / when not
+
+- Use when: you are about to share or publish Devin session data (an export, a bug report, a demo DB); you want a pre-publish gate in CI (`verify` exit code); you need redaction inside `sessions.db` itself, not just in exported text; you want findings that include semantic context (a command that read a sensitive file) rather than pattern matching alone.
+- Not when: you need a guarantee that no secret survives (pattern-based scanning has false negatives; run gitleaks/trufflehog alongside it); you want to prevent secrets from entering transcripts in the first place (that is policy work, not redaction); you cannot tolerate a destructive operation on the DB (`--apply` rewrites cells in place — run devin-backup first); your target is a non-Devin JSONL transcript (geheim/agent-leaks target those).
+
+## Related
+
+- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [devin-history](https://github.com/Icaro0310/devin-history): produces the exports this scans before sharing
+- [devin-backup](https://github.com/Icaro0310/devin-backup): recommended safety net before `--apply`
+- [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): documents the stores this reads and writes
