@@ -81,6 +81,9 @@ devin-redact scan caminho/para/sessions.db exports/ .env
 # Igual, mas também grava o relatório num ficheiro
 devin-redact scan sessions.db --report report.json
 
+# SARIF 2.1.0 para ingestão em CI / code-scanning (nunca contém o segredo)
+devin-redact scan sessions.db --format sarif > scan.sarif
+
 # Redact em dry-run — mostra exatamente o que mudaria, não modifica nada
 devin-redact redact sessions.db
 
@@ -110,6 +113,44 @@ bearer tokens e JWTs, tokens GitHub (`ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_`,
 `github_pat_`), chaves privadas PEM, assignments estilo `.env` para nomes de
 variáveis sensíveis, códigos de pareamento Devin, emails e paths absolutos
 de utilizador (`C:\Users\…`, `/home/…`, `/Users/…`).
+
+`scan --format sarif` emite um log [SARIF 2.1.0](https://sarifweb.azurewebsites.net/)
+em vez do relatório JSON: um rule descriptor por categoria de deteção, um
+result por finding com a sua localização (`region.startLine` para ficheiros
+de texto; o localizador `table.column#rowid` do SQLite fica preservado em
+`properties.location`), uma mensagem mascarada como `match: aws access key
+id` e o fingerprint sha256 como `partialFingerprints` para deduplicação.
+Categorias de segredo mapeiam para `level: error`, PII/higiene para
+`warning`. O log nunca contém o texto do segredo, por isso é seguro enviá-lo
+para dashboards de code-scanning ou arquivá-lo como artefacto de CI.
+
+## O que é examinado
+
+Os alvos podem ser ficheiros ou diretórios; diretórios são percorridos
+recursivamente. Cada ficheiro é despachado por tipo — detetado por extensão
+**ou** por conteúdo:
+
+- **Stores SQLite** (`.db`/`.sqlite`/`.sqlite3`, *ou qualquer ficheiro que
+  comece com o magic header `SQLite format 3`*) são abertas read-only e
+  todas as colunas de texto de todas as tabelas são examinadas. Isto cobre
+  o `sessions.db` do Devin e `User/acp-messages/*.db`, além das stores
+  derivadas que herdam texto de sessão: o `graph.db` do
+  [`devin-graph`](https://github.com/Icaro0310/devin-graph), o `search.db`
+  do [`devin-search`](https://github.com/Icaro0310/devin-search)
+  (incluindo o `docs` FTS5) e o `memory.db` do
+  [`devin-memory`](https://github.com/Icaro0310/devin-memory). Em dados
+  com formato `sessions.db` a camada semântica de tool-calls e a extração
+  de `project_name` também se aplicam; as outras stores recebem o scan
+  genérico de colunas de texto.
+- **Ficheiros de texto** — notas `.md` (incluindo um dir de export do
+  `devin-history`, cujas notas se chamam `<YYYY-MM-DD>_<session-id>.md`),
+  exports `.json`/`.jsonl`, `.env`, logs — são examinados por inteiro; os
+  findings trazem número de linha.
+- **Ficheiros binários** são ignorados e reportados em `errors`.
+
+O `redact` usa o mesmo dispatch: stores SQLite derivadas também são
+regraváveis com `--apply`, com as mesmas garantias de `.bak` + transação +
+teste de integridade do `sessions.db`.
 
 ## Funciona só com o Devin (modo Devin-only)
 

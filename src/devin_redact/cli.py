@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from . import __version__, engine
+from .sarif import report_to_sarif
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -23,7 +24,14 @@ def _build_parser() -> argparse.ArgumentParser:
         p.add_argument("paths", nargs="+", type=Path, help="files or directories to inspect")
         p.add_argument("--report", type=Path, default=None, help="also write the JSON report to this file")
 
-    _add_target_args(sub.add_parser("scan", help="read-only scan, prints a JSON report"))
+    scan_p = sub.add_parser("scan", help="read-only scan, prints a JSON report")
+    _add_target_args(scan_p)
+    scan_p.add_argument(
+        "--format",
+        choices=("json", "sarif"),
+        default="json",
+        help="output format (sarif = SARIF 2.1.0 for CI/code-scanning ingestion)",
+    )
 
     redact_p = sub.add_parser("redact", help="redact findings (dry-run by default)")
     _add_target_args(redact_p)
@@ -51,7 +59,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
     if args.command == "scan":
-        _emit(engine.scan(args.paths), args.report)
+        report = engine.scan(args.paths)
+        _emit(report_to_sarif(report) if args.format == "sarif" else report, args.report)
         return 0
 
     if args.command == "redact":

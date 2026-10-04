@@ -27,6 +27,7 @@ from .patterns import PATTERNS, SECRET_CATEGORIES, pattern_name, sensitive_match
 from .semantic import analyze_tool_call_json
 
 _DB_SUFFIXES = {".db", ".sqlite", ".sqlite3"}
+_SQLITE_MAGIC = b"SQLite format 3\x00"
 _SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", "__pycache__", ".venv", "venv"}
 _BINARY_SNIFF_BYTES = 8192
 _REDACTED_TAG = "<REDACTED:"
@@ -158,6 +159,30 @@ def _looks_binary(path: Path) -> bool:
     except OSError:
         return True
     return b"\x00" in chunk
+
+
+def _target_type(path: Path) -> str:
+    """Dispatch a scan/redact target: ``"sqlite"``, ``"text"`` or ``"binary"``.
+
+    SQLite stores are detected by extension first (cheap) and then by the
+    ``SQLite format 3`` magic header, so derived databases — ``graph.db``,
+    ``search.db``, ``memory.db``, ``acp-messages/*.db`` — are scanned as
+    databases even when they reach us under an unusual name or no
+    extension at all. Anything else that is not binary (``.md`` notes,
+    ``.json``/``.jsonl`` exports, ``.env``, plain text) is scanned as text.
+    """
+    if path.suffix.lower() in _DB_SUFFIXES:
+        return "sqlite"
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(_BINARY_SNIFF_BYTES)
+    except OSError:
+        return "binary"
+    if head.startswith(_SQLITE_MAGIC):
+        return "sqlite"
+    if b"\x00" in head:
+        return "binary"
+    return "text"
 
 
 def _leaf_strings(obj) -> list[str]:
@@ -408,9 +433,10 @@ def scan(paths) -> dict:
 
     for f in files:
         display = str(f)
-        if f.suffix.lower() in _DB_SUFFIXES:
+        kind = _target_type(f)
+        if kind == "sqlite":
             findings, err = _scan_db(f, display)
-        elif _looks_binary(f):
+        elif kind == "binary":
             errors.append({"file": display, "error": "skipped: binary file"})
             continue
         else:
@@ -583,7 +609,8 @@ def redact(paths, *, apply: bool = False, confirm_irreversible: bool = False) ->
 
     for f in files:
         display = str(f)
-        if f.suffix.lower() in _DB_SUFFIXES:
+        kind = _target_type(f)
+        if kind == "sqlite":
             cell_edits, err = _plan_db(f, display)
             if err:
                 errors.append({"file": display, "error": err})
@@ -599,7 +626,7 @@ def redact(paths, *, apply: bool = False, confirm_irreversible: bool = False) ->
                                 **e,
                             }
                         )
-        elif _looks_binary(f):
+        elif kind == "binary":
             errors.append({"file": display, "error": "skipped: binary file"})
             continue
         else:

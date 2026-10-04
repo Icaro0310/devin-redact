@@ -78,6 +78,9 @@ devin-redact scan path/to/sessions.db exports/ .env
 # Same, plus write the report to a file
 devin-redact scan sessions.db --report report.json
 
+# SARIF 2.1.0 for CI / code-scanning ingestion (never contains secret text)
+devin-redact scan sessions.db --format sarif > scan.sarif
+
 # Dry-run redact — shows exactly what would change, modifies nothing
 devin-redact redact sessions.db
 
@@ -107,6 +110,41 @@ bearer tokens and JWTs, GitHub tokens (`ghp_`, `gho_`, `ghu_`, `ghs_`,
 `ghr_`, `github_pat_`), PEM private keys, `.env`-style assignments to
 sensitive variable names, Devin pairing codes, email addresses, and absolute
 user paths (`C:\Users\…`, `/home/…`, `/Users/…`).
+
+`scan --format sarif` emits a [SARIF 2.1.0](https://sarifweb.azurewebsites.net/)
+log instead of the JSON report: one rule descriptor per detection category,
+one result per finding with its file location (`region.startLine` for text
+files; the `table.column#rowid` SQLite locator is preserved in
+`properties.location`), a masked message like `match: aws access key id`,
+and the sha256 fingerprint as `partialFingerprints` for deduplication.
+Secret-class categories map to `level: error`, PII/hygiene to `warning`.
+The log never contains the matched secret text, so it is safe to upload to
+code-scanning dashboards or archive as a CI artifact.
+
+## What gets scanned
+
+Targets can be files or directories; directories are walked recursively.
+Every file is dispatched by type — detected by extension **or** by content:
+
+- **SQLite stores** (`.db`/`.sqlite`/`.sqlite3`, *or any file starting with
+  the `SQLite format 3` magic header*) are opened read-only and every text
+  column of every table is scanned. This covers Devin's `sessions.db` and
+  `User/acp-messages/*.db`, plus the derived stores that inherit session
+  text: [`devin-graph`](https://github.com/Icaro0310/devin-graph)'s
+  `graph.db`, [`devin-search`](https://github.com/Icaro0310/devin-search)'s
+  `search.db` (FTS5 `docs` included) and
+  [`devin-memory`](https://github.com/Icaro0310/devin-memory)'s
+  `memory.db`. On `sessions.db`-shaped data the tool-call semantic layer
+  and `project_name` extraction also apply; other stores get the generic
+  text-column scan.
+- **Text files** — `.md` notes (including a `devin-history` export dir,
+  whose notes are named `<YYYY-MM-DD>_<session-id>.md`), `.json`/`.jsonl`
+  exports, `.env`, logs — are scanned whole; findings carry a line number.
+- **Binary files** are skipped and reported under `errors`.
+
+`redact` uses the same dispatch: derived SQLite stores are rewritable under
+`--apply` with the same `.bak` + transaction + integrity-check guarantees
+as `sessions.db`.
 
 ## Works with Devin alone (Devin-only mode)
 
