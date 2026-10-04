@@ -990,8 +990,15 @@ def _apply_db(path: Path, cell_edits: list[dict]) -> None:
 
 
 def _apply_text(path: Path, new_text: str) -> None:
+    """Atomic text rewrite: .bak first, then tmp file + os.replace."""
     _backup(path)
-    path.write_text(new_text, encoding="utf-8")
+    tmp = path.with_name(path.name + ".redact-tmp")
+    try:
+        tmp.write_text(new_text, encoding="utf-8")
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def redact(paths, *, apply: bool = False, confirm_irreversible: bool = False) -> dict:
