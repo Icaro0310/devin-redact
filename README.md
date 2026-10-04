@@ -116,6 +116,14 @@ devin-redact verify-publish exports/
 devin-redact verify-publish exports/ --json
 ```
 
+No Devin installed? Try it on a synthetic fixture:
+
+```bash
+pipx install "git+https://github.com/Icaro0310/devin-internals-spec"
+devin-inspect make-fixture /tmp/fx
+devin-redact scan /tmp/fx/cli/sessions.db
+```
+
 Report shape (deterministic — same input, same output):
 
 ```json

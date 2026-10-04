@@ -120,6 +120,14 @@ devin-redact verify-publish exports/
 devin-redact verify-publish exports/ --json
 ```
 
+Sem Devin instalado? Experimenta numa fixture sintética:
+
+```bash
+pipx install "git+https://github.com/Icaro0310/devin-internals-spec"
+devin-inspect make-fixture /tmp/fx
+devin-redact scan /tmp/fx/cli/sessions.db
+```
+
 Formato do relatório (determinístico — mesmo input, mesmo output):
 
 ```json
