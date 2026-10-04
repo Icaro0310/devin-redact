@@ -3,6 +3,7 @@
 <img src="assets/banner.svg" alt="devin-redact" width="100%"/>
 
 <a href="https://github.com/Icaro0310/devin-redact/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-redact/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
+<a href="https://pypi.org/project/devin-redact/"><img src="https://img.shields.io/pypi/v/devin-redact" alt="PyPI"/></a>
 
 
 </div>
