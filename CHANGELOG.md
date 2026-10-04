@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `devin_redact.paths`: default `sessions.db` discovery matching the
+  ecosystem convention (`%APPDATA%\devin\cli\sessions.db`,
+  `~/Library/Application Support/…`, `$XDG_DATA_HOME`/`$XDG_CONFIG_HOME`/`~`
+  fallbacks) — same candidate order as `devin-history`.
+- CLI `sessionend-scan`: the `scan` invocation shaped for the
+  `SessionEnd` hook (RD-1). Scan-only, bounded to the auto-detected
+  default `sessions.db` (optional explicit path), prints one compact
+  verdict line (`devin-redact: findings=N publication_status=X`), exits
+  0 even on `BLOCKED` — non-zero (2) only on hard error. Registration
+  documented in `docs/HOOKS.md` with the `hooks.json` entry for the
+  planned `devin-powerups` hook dispatcher.
+- CLI `gate`: machine gate for pipelines like `devin-history` (RD-4).
+  Prints just the `publication_status` word; exits 0 for CLEAN/REVIEW,
+  1 for BLOCKED, 2 on error.
+- Cross-chunk scan pass (RD-2): on `sessions.db`-shaped stores, re-scans
+  concatenations of adjacent same-session payloads —
+  `tool_call_json`+`tool_call_update_json` of the same `tool_call_state`
+  row, adjacent `tool_call_state`/`message_nodes` rows, and streaming
+  parts inside one payload — so secrets split across two chunks are
+  reassembled and reported at the earlier rowid with
+  `kind="cross-chunk"`. Bounded: adjacent pairs only, same session only,
+  full pattern matching only after a cheap boundary pre-filter.
+  Detection-only: `redact` does not rewrite split secrets back into two
+  halves.
+- CLI `session-end`: per-session SessionEnd hook (RD-1). Resolves the
+  just-ended session — `--session-id` → `{"session_id": …}` on stdin →
+  `DEVIN_SESSION_ID` → most recently active in `sessions.db` — scans only
+  that session's rows via `engine.scan_session()` and writes the verdict
+  to a side file (`<data-dir>/redact/<session-id>.json`; `--data-dir`,
+  `DEVIN_REDACT_DATA_DIR` and `--out` override). Never writes into any
+  Devin store or transcript; fail-soft — unresolvable sessions produce a
+  `SKIPPED` verdict and exit 0, only usage errors exit 2.
+- CLI `verify-publish`: publication gate for `devin-history` export
+  directories (RD-4). Enumerates exported sessions from `index.json`/
+  `index.md` or the `<YYYY-MM-DD>_<session-id>.<ext>` layout, extracts
+  each `session_id`, scans every file read-only and reports per-session
+  verdicts. Cross-references `session-end` side files — a `BLOCKED` hook
+  verdict beside a `CLEAN` export is a warning that holds the overall
+  verdict at `REVIEW`. Exits 0 only when the overall verdict is `CLEAN`.
+- Session-scoped scanning: `engine.scan_session(db, session_id)` filters
+  every session-attributed table (`session_id` column, or `sessions.id`),
+  including the cross-chunk pass; the `sessions` metadata row itself is
+  excluded so clean sessions stay `CLEAN`.
+- Cross-chunk pre-filter hardened (RD-2): a token-run of secret length
+  spanning a payload boundary now triggers the reassembly scan, so a
+  secret split at *any* byte offset — including 1-char fragments on
+  either side — is detected; context pre-filters relaxed to catch
+  `Bearer`/`KEY=`/`pairing code` hugging the edge.
+- Tests: split-secret fixtures (adjacent message nodes, adjacent and
+  within-row tool calls, streamed content parts), cross-session and
+  non-adjacent negatives, every-offset split sweep, `sessionend-scan`/
+  `gate`/`session-end` exit codes and verdict contracts, `verify-publish`
+  over md/json export layouts, path auto-detection. 100 tests green.
+
 ## [0.2.0] - 2026-09-29
 
 ### Added

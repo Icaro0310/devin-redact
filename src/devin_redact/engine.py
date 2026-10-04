@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import sqlite3
 from pathlib import Path, PurePosixPath
@@ -303,6 +304,312 @@ def _scan_cell(value: str, display: str, location: str) -> list[Finding]:
     return findings
 
 
+# --------------------------------------------------------------------------
+# Cross-chunk pass (RD-2)
+# --------------------------------------------------------------------------
+#
+# A secret streamed in pieces can land split across two adjacent payloads —
+# half an AWS key at the end of one tool output, the rest at the start of
+# the next. Each payload alone matches no pattern, so per-cell scanning
+# misses it. The pass below re-scans *concatenations* of adjacent text
+# payloads — `tool_call_json`+`tool_call_update_json` of the same
+# `tool_call_state` row, adjacent `tool_call_state` rows of the same
+# session, adjacent `message_nodes` rows of the same session, and leaves
+# inside one payload (streaming parts) — keeping it strictly bounded:
+# adjacent pairs only, same session only, and the full pattern suite only
+# runs when a cheap boundary pre-filter says a split is plausible.
+
+# How many leaves off a payload edge are considered "near the boundary".
+_CHUNK_EDGE_LEAVES = 8
+# Window (chars off the end of a payload) searched for context patterns.
+_SPLIT_TAIL_WINDOW = 160
+# A token-ish run spanning a payload boundary with at least this many
+# combined chars is scanned unconditionally — every pattern-shaped secret
+# is a long token, so this catches splits at *any* byte offset, including
+# 1-char fragments that contain no marker at all.
+_BOUNDARY_RUN_MIN = 12
+# Token-ish run at a payload edge: a split secret continues as word chars.
+_TOKEN_EDGE = re.compile(r"[A-Za-z0-9_+/.~=-]+")
+_TOKEN_TAIL = re.compile(r"[A-Za-z0-9_+/.~=-]+$")
+# Distinctive starts of the secret shapes in `patterns.py`. A payload whose
+# trailing token contains one of these (or ends mid-marker) may hold the
+# first half of a split secret.
+_SPLIT_HEAD_MARKERS = (
+    "AKIA",
+    "ASIA",
+    "sk-",
+    "sk_live_",
+    "rk_live_",
+    "AIza",
+    "xox",
+    "ghp_",
+    "gho_",
+    "ghu_",
+    "ghs_",
+    "ghr_",
+    "github_pat_",
+    "eyJ",
+    "-----BEGIN",
+)
+# Context-dependent secret shapes: the keyword part sits in the earlier
+# payload, the sensitive tail runs to (or past) the boundary.
+_SPLIT_CONTEXT_RES = (
+    re.compile(r"[Bb]earer(?:\s+[A-Za-z0-9._~+/=-]*)?$"),
+    re.compile(
+        r"[A-Za-z_][A-Za-z0-9_]*"
+        r"(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL)[A-Za-z0-9_]*"
+        r"\s*=\s*\S*$"
+    ),
+    re.compile(r"(?i)(?:pairing|pair)[ -]?code\s*[:=]?\s*[A-Z0-9-]{0,}$"),
+)
+
+
+def _payload_parts(value) -> tuple[list[str], str]:
+    """Flatten one cell to ``(leaf_strings, joined_text)``."""
+    if not isinstance(value, str) or not value:
+        return [], ""
+    stripped = value.lstrip()
+    if stripped.startswith(("{", "[")):
+        try:
+            leaves = _leaf_strings(json.loads(value))
+        except (json.JSONDecodeError, RecursionError):
+            leaves = [value]
+    else:
+        leaves = [value]
+    return leaves, "".join(leaves)
+
+
+def _edge(text: str) -> tuple[int, int, bool]:
+    """Boundary descriptor for one payload: ``(head_len, tail_len,
+    suspicious_tail)``.
+
+    ``head_len``/``tail_len`` are the token-ish runs at the start/end of
+    ``text``; ``suspicious_tail`` is true when the trailing token contains
+    a secret-shape marker (or a marker prefix) or the tail window ends
+    inside a context pattern (`Bearer …`, `KEY=…`, `pairing code: …`)
+    whose value reaches the boundary. Computed once per payload so pair
+    checks are arithmetic, not regex calls.
+    """
+    head_match = _TOKEN_EDGE.match(text) if text else None
+    tail_match = _TOKEN_TAIL.search(text) if text else None
+    tail = tail_match.group(0) if tail_match else ""
+    suspicious = False
+    if tail:
+        for marker in _SPLIT_HEAD_MARKERS:
+            if marker in tail or marker.startswith(tail):
+                suspicious = True
+                break
+    if not suspicious and text:
+        window = text[-_SPLIT_TAIL_WINDOW:]
+        suspicious = any(rx.search(window) for rx in _SPLIT_CONTEXT_RES)
+    return (len(head_match.group(0)) if head_match else 0, len(tail), suspicious)
+
+
+def _maybe_split(a: tuple[int, int, bool], b: tuple[int, int, bool]) -> bool:
+    """Cheap pre-filter: could ``a`` end mid-secret that ``b`` continues?
+
+    ``a``/``b`` are :func:`_edge` descriptors. Requires ``b`` to open with
+    a token-ish run (the continuation), then either a token-run of secret
+    length spanning the boundary (covers splits at any byte offset, even
+    1-char fragments) or a suspicious tail on ``a``.
+    """
+    head_b = b[0]
+    if not head_b:
+        return False
+    tail_len, suspicious = a[1], a[2]
+    if tail_len and tail_len + head_b >= _BOUNDARY_RUN_MIN:
+        return True
+    return suspicious
+
+
+def _chunk_finding(
+    f: Finding, location: str, combined_with: str | None
+) -> Finding:
+    f["kind"] = "cross-chunk"
+    f["location"] = location
+    if combined_with:
+        f["combined_with"] = combined_with
+    return f
+
+
+def _unit_chunk_findings(
+    leaves: list[str],
+    text: str,
+    known: set[tuple[str, str]],
+    display: str,
+    location: str,
+) -> list[Finding]:
+    """Findings reassembled *inside* one payload — secrets split across
+    streaming parts (adjacent leaves) of a single cell."""
+    out: list[Finding] = []
+    n = len(leaves)
+    if n < 2:
+        return out
+    edges = [_edge(leaf) for leaf in leaves]
+    seen = set(known)
+    # The whole-joined scan catches secrets spanning several contiguous
+    # leaves. It only runs when some adjacent leaf boundary looks like a
+    # mid-secret split — a contiguous span always crosses one.
+    if any(_maybe_split(edges[i], edges[i + 1]) for i in range(n - 1)):
+        for f in scan_text(text, file=display, location=location):
+            key = (str(f["category"]), str(f["fingerprint"]))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(_chunk_finding(f, location, None))
+    # Pairwise edge leaves catch non-contiguous splits — JSON structural
+    # leaves (`"type"`, `"content"`) sit between the halves in the joined
+    # text, so the whole-joined scan cannot see those.
+    for i in range(n):
+        la = leaves[i]
+        for j in range(i + 1, min(i + _CHUNK_EDGE_LEAVES + 1, n)):
+            if not _maybe_split(edges[i], edges[j]):
+                continue
+            for f in scan_text(la + leaves[j], file=display, location=location):
+                key = (str(f["category"]), str(f["fingerprint"]))
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(_chunk_finding(f, location, None))
+    return out
+
+
+def _pair_chunk_findings(
+    unit_a: tuple[list[str], str],
+    unit_b: tuple[list[str], str],
+    known: set[tuple[str, str]],
+    display: str,
+    location: str,
+    combined_with: str,
+) -> list[Finding]:
+    """Findings reassembled across the boundary of two adjacent payloads.
+
+    Candidate concatenations: the whole joined texts, each side's text
+    against the other side's boundary leaves, and pairwise edge leaves —
+    JSON structural leaves (`"type"`, `"content"`, ids) otherwise sit
+    between the halves and would keep them apart.
+    """
+    leaves_a, text_a = unit_a
+    leaves_b, text_b = unit_b
+    edge_a = leaves_a[-_CHUNK_EDGE_LEAVES:]
+    edge_b = leaves_b[:_CHUNK_EDGE_LEAVES]
+    edge_text_a = _edge(text_a)
+    edge_text_b = _edge(text_b)
+    edges_a = [_edge(la) for la in edge_a]
+    edges_b = [_edge(lb) for lb in edge_b]
+    candidates: list[tuple[tuple[int, int, bool], tuple[int, int, bool], str, str]] = [
+        (edge_text_a, edge_text_b, text_a, text_b)
+    ]
+    candidates += [
+        (edge_text_a, edges_b[k], text_a, lb) for k, lb in enumerate(edge_b)
+    ]
+    candidates += [
+        (edges_a[k], edge_text_b, la, text_b) for k, la in enumerate(edge_a)
+    ]
+    candidates += [
+        (ea, eb, la, lb) for ea, la in zip(edges_a, edge_a) for eb, lb in zip(edges_b, edge_b)
+    ]
+    out: list[Finding] = []
+    seen = set(known)
+    for ea, eb, a, b in candidates:
+        if not _maybe_split(ea, eb):
+            continue
+        for f in scan_text(a + b, file=display, location=location):
+            key = (str(f["category"]), str(f["fingerprint"]))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(_chunk_finding(f, location, combined_with))
+    return out
+
+
+def _known_by_location(findings: list[Finding]) -> dict[str, set[tuple[str, str]]]:
+    """Map each ``table.column#rowid=N`` locator to the ``(category,
+    fingerprint)`` pairs the per-cell pass already found there — so the
+    chunked pass dedupes without rescanning."""
+    known: dict[str, set[tuple[str, str]]] = {}
+    for f in findings:
+        loc = str(f.get("location", ""))
+        if "#rowid=" not in loc:
+            continue
+        known.setdefault(loc, set()).add(
+            (str(f["category"]), str(f["fingerprint"]))
+        )
+    return known
+
+
+def _scan_chunked(
+    con: sqlite3.Connection,
+    display: str,
+    session_id: str | None = None,
+    scanned: list[Finding] | None = None,
+) -> list[Finding]:
+    """Cross-chunk pass over the sessions.db-shaped tables.
+
+    Bounded: only `tool_call_state` and `message_nodes`, only adjacent
+    rows, only inside one `session_id` (which is also the scoping key
+    when ``session_id`` is given), and the full pattern suite only runs
+    where the boundary pre-filter says a split is plausible.
+    """
+    findings: list[Finding] = []
+    tables = set(_db_tables(con))
+    specs = (
+        ("tool_call_state", ("tool_call_json", "tool_call_update_json")),
+        ("message_nodes", ("chat_message",)),
+    )
+    known_by_loc = _known_by_location(scanned or [])
+    for table, cols in specs:
+        if table not in tables:
+            continue
+        existing = {r[1] for r in con.execute(f'PRAGMA table_info("{table}")')}
+        if not set(cols) <= existing:
+            continue
+        has_session = "session_id" in existing
+        try:
+            rows = sorted(_db_rows(con, table, session_id), key=lambda r: r[0])
+        except sqlite3.Error:
+            continue
+        label = "+".join(cols)
+        units: list[tuple[int, object, list[str], str, set[tuple[str, str]]]] = []
+        for rowid, cells in rows:
+            leaves: list[str] = []
+            parts: list[str] = []
+            known: set[tuple[str, str]] = set()
+            for col in cols:
+                ls, t = _payload_parts(cells.get(col))
+                leaves.extend(ls)
+                parts.append(t)
+                known |= known_by_loc.get(
+                    f"{table}.{col}#rowid={rowid}", set()
+                )
+            text = "".join(parts)
+            location = f"{table}.{label}#rowid={rowid}"
+            new = _unit_chunk_findings(leaves, text, known, display, location)
+            findings.extend(new)
+            known |= {
+                (str(f["category"]), str(f["fingerprint"])) for f in new
+            }
+            units.append((rowid, cells.get("session_id"), leaves, text, known))
+        for a, b in zip(units, units[1:]):
+            rid_a, sess_a, leaves_a, text_a, known_a = a
+            rid_b, sess_b, leaves_b, text_b, known_b = b
+            if has_session and session_id is None and (not sess_a or sess_a != sess_b):
+                continue
+            loc_a = f"{table}.{label}#rowid={rid_a}"
+            loc_b = f"{table}.{label}#rowid={rid_b}"
+            findings.extend(
+                _pair_chunk_findings(
+                    (leaves_a, text_a),
+                    (leaves_b, text_b),
+                    known_a | known_b,
+                    display,
+                    loc_a,
+                    loc_b,
+                )
+            )
+    return findings
+
+
 def _open_ro(path: Path) -> sqlite3.Connection:
     uri = "file:" + str(path.resolve()).replace("\\", "/") + "?mode=ro"
     return sqlite3.connect(uri, uri=True)
@@ -318,11 +625,25 @@ def _db_tables(con: sqlite3.Connection) -> list[str]:
     ]
 
 
-def _db_rows(con: sqlite3.Connection, table: str):
-    """Yield ``(rowid, {col: value})`` for every row of ``table``."""
+def _db_rows(con: sqlite3.Connection, table: str, session_id: str | None = None):
+    """Yield ``(rowid, {col: value})`` for rows of ``table``.
+
+    With ``session_id``, only rows attributed to that session are yielded:
+    tables with a ``session_id`` column are filtered on it, ``sessions``
+    is filtered on ``id``, and tables with neither contribute nothing
+    (global stores like ``app_state`` are not session data).
+    """
     safe = table.replace('"', '""')
     cols = [r[1] for r in con.execute(f'PRAGMA table_info("{safe}")')]
-    for row in con.execute(f'SELECT rowid, * FROM "{safe}"'):
+    where, args = "", ()
+    if session_id is not None:
+        if "session_id" in cols:
+            where, args = " WHERE session_id = ?", (session_id,)
+        elif table == "sessions" and "id" in cols:
+            where, args = " WHERE id = ?", (session_id,)
+        else:
+            return
+    for row in con.execute(f'SELECT rowid, * FROM "{safe}"{where}', args):
         yield row[0], dict(zip(cols, row[1:]))
 
 
@@ -340,9 +661,17 @@ def _semantic_finding(display: str, location: str, flag: dict, output: str) -> F
     }
 
 
-def _scan_db(path: Path, display: str) -> tuple[list[Finding], str | None]:
+def _scan_db(
+    path: Path, display: str, session_id: str | None = None
+) -> tuple[list[Finding], str | None]:
     """Scan every TEXT-looking cell of a SQLite DB, plus the tool-call
-    semantic layer over ``tool_call_state``."""
+    semantic layer over ``tool_call_state``.
+
+    With ``session_id``, only rows attributed to that session are scanned
+    (see :func:`_db_rows`). The ``sessions`` table itself is skipped in
+    that mode — its row is session metadata (working dir, title), not a
+    message, and the ``project_name``/``absolute_path`` hygiene findings
+    it yields would make every session verdict ``REVIEW``."""
     findings: list[Finding] = []
     try:
         con = _open_ro(path)
@@ -350,8 +679,10 @@ def _scan_db(path: Path, display: str) -> tuple[list[Finding], str | None]:
         return findings, f"sqlite open failed: {exc}"
     try:
         for table in _db_tables(con):
+            if session_id is not None and table == "sessions":
+                continue
             try:
-                rows = list(_db_rows(con, table))
+                rows = list(_db_rows(con, table, session_id))
             except sqlite3.Error:
                 continue
             for rowid, cells in rows:
@@ -363,6 +694,7 @@ def _scan_db(path: Path, display: str) -> tuple[list[Finding], str | None]:
                     if (
                         table == "sessions"
                         and col_name == "working_directory"
+                        and session_id is None
                         and _REDACTED_TAG not in value
                     ):
                         base = PurePosixPath(value.replace("\\", "/")).name
@@ -390,6 +722,7 @@ def _scan_db(path: Path, display: str) -> tuple[list[Finding], str | None]:
                             findings.append(
                                 _semantic_finding(display, location, flag, update_json)
                             )
+        findings.extend(_scan_chunked(con, display, session_id, findings))
     except sqlite3.Error as exc:
         return findings, f"sqlite scan failed: {exc}"
     finally:
@@ -464,6 +797,80 @@ def scan(paths) -> dict:
         "publication_status": status,
         "findings": all_findings,
         "errors": errors,
+    }
+
+
+def session_exists(db_path, session_id: str) -> bool | None:
+    """Whether ``sessions`` contains ``session_id``.
+
+    ``None`` when the question cannot be answered (unreadable DB, no
+    ``sessions`` table) — callers treat that as "unknown", not absent.
+    """
+    try:
+        con = _open_ro(Path(db_path))
+    except sqlite3.Error:
+        return None
+    try:
+        if "sessions" not in _db_tables(con):
+            return None
+        row = con.execute(
+            "SELECT 1 FROM sessions WHERE id = ? LIMIT 1", (session_id,)
+        ).fetchone()
+        return row is not None
+    except sqlite3.Error:
+        return None
+    finally:
+        con.close()
+
+
+def latest_session_id(db_path) -> str | None:
+    """Most recently active session id in a ``sessions.db``, or ``None``
+    when it cannot be determined (unreadable DB, no ``sessions`` table)."""
+    try:
+        con = _open_ro(Path(db_path))
+    except sqlite3.Error:
+        return None
+    try:
+        if "sessions" not in _db_tables(con):
+            return None
+        row = con.execute(
+            "SELECT id FROM sessions ORDER BY last_activity_at DESC LIMIT 1"
+        ).fetchone()
+        return str(row[0]) if row else None
+    except sqlite3.Error:
+        return None
+    finally:
+        con.close()
+
+
+def scan_session(db_path, session_id: str) -> dict:
+    """Scan the rows of one session in a ``sessions.db``-shaped store.
+
+    Same finding/report vocabulary as :func:`scan` but scoped by
+    ``session_id`` (see :func:`_db_rows`); read-only. Used by the
+    ``session-end`` hook so it audits the just-ended session instead of
+    re-scanning the whole store. The ``project_name`` metadata finding is
+    skipped in this mode — it comes from the session's own
+    ``working_directory`` and would make every verdict REVIEW.
+    """
+    path = Path(db_path)
+    display = str(path)
+    findings, err = _scan_db(path, display, session_id=session_id)
+    findings.sort(
+        key=lambda x: (str(x["file"]), str(x["location"]), str(x["category"]), str(x["fingerprint"]))
+    )
+    by_category, secrets, status = _summarize(findings)
+    return {
+        "tool": "devin-redact",
+        "version": __version__,
+        "session_id": session_id,
+        "files_scanned": 1,
+        "secrets": secrets,
+        "findings_total": len(findings),
+        "by_category": by_category,
+        "publication_status": status,
+        "findings": findings,
+        "errors": [{"file": display, "error": err}] if err else [],
     }
 
 

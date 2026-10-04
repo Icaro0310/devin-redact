@@ -93,6 +93,28 @@ devin-redact redact sessions.db --apply --i-know-this-is-irreversible
 # Gate de publicação: exit 0 só quando CLEAN, senão 1
 devin-redact verify sessions.db exports/
 devin-redact verify sessions.db --json
+
+# Gate para pipelines (ex.: export do devin-history): imprime só a
+# palavra de status; sai 0 em CLEAN/REVIEW, 1 em BLOCKED, 2 em erro
+devin-redact gate sessions.db exports/
+
+# Handler de hook SessionEnd: scan read-only da sessions.db padrão,
+# uma linha de veredito compacta, exit 0 salvo erro grave
+devin-redact sessionend-scan
+# → devin-redact: findings=7 publication_status=BLOCKED
+
+# Hook SessionEnd (veredito por sessão): resolve a sessão que acabou,
+# examina só as mensagens dela e grava o veredito num ficheiro lateral em
+# <data-dir>/redact/<session-id>.json — fail-soft, sai 0 mesmo em SKIPPED
+devin-redact session-end                       # resolve a sessão sozinho
+echo '{"session_id": "abc"}' | devin-redact session-end
+devin-redact session-end --session-id abc --out verdict.json
+
+# Gate de um dir de export do devin-history antes de publicar: vereditos
+# por sessão cruzados com os ficheiros laterais do session-end;
+# exit 0 só quando CLEAN
+devin-redact verify-publish exports/
+devin-redact verify-publish exports/ --json
 ```
 
 Formato do relatório (determinístico — mesmo input, mesmo output):
@@ -124,6 +146,70 @@ Categorias de segredo mapeiam para `level: error`, PII/higiene para
 `warning`. O log nunca contém o texto do segredo, por isso é seguro enviá-lo
 para dashboards de code-scanning ou arquivá-lo como artefacto de CI.
 
+## Hook SessionEnd
+
+`devin-redact sessionend-scan` é a invocação de `scan` feita para o
+dispatcher de hooks do ecossistema (`tools/hooks_dispatch.py` no
+`devin-powerups`, que corre handlers registrados em eventos de hook do
+Devin). É **somente scan**: read-only, limitado à `sessions.db` padrão
+auto-detectada, imprime uma linha de veredito compacta
+(`findings=N publication_status=X`) e sai 0 mesmo quando o veredito é
+`BLOCKED` — não-zero só em erro grave, para nunca travar o encerramento
+da sessão. Entrada de registo para o `hooks.json`:
+
+```json
+{
+  "SessionEnd": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "devin-redact sessionend-scan",
+          "timeout": 30
+        }
+      ]
+    }
+  ]
+}
+```
+
+Vê [`docs/HOOKS.md`](docs/HOOKS.md) para o contrato completo.
+
+`devin-redact session-end` é a variante por sessão: resolve **a sessão
+que acabou de terminar** — flag `--session-id` → payload JSON
+`{"session_id": …}` no stdin → `DEVIN_SESSION_ID` → a sessão mais
+recentemente ativa na `sessions.db` — e examina apenas as linhas dessa
+sessão (mensagens, tool-call state, histórico de prompts; a linha de
+metadados da tabela `sessions` fica de fora). O veredito é gravado num
+**ficheiro lateral** — `<data-dir>/redact/<session-id>.json` por
+omissão (`--data-dir`, `DEVIN_REDACT_DATA_DIR` ou `--out` podem
+sobrepor; `<data-dir>` é a raiz `devin/` do store resolvido) — nunca
+dentro de nenhum store ou transcript do Devin. É fail-soft: uma sessão
+irresolúvel produz veredito `SKIPPED` e o comando sai 0 mesmo assim; só
+erros de uso saem 2. `sessionend-scan` (a linha de veredito do store
+inteiro) e `session-end` (o ficheiro lateral por sessão) complementam-se
+— escolhe o formato que o teu hook precisa.
+
+## Gate de publicação para exports
+
+`devin-redact verify-publish <export-dir>` cruza os achados de redaction
+com o estado de export do
+[`devin-history`](https://github.com/Icaro0310/devin-history) antes de
+qualquer publicação. Enumera as sessões exportadas — `index.json`
+(`{"sessions": [{"file": …}]}`) ou wikilinks do `index.md` quando
+presentes, senão o layout `<YYYY-MM-DD>_<session-id>.{md,json}` —
+extrai cada `session_id` (campo JSON, frontmatter da nota ou nome do
+ficheiro), examina cada ficheiro exportado em read-only e reporta
+vereditos por sessão. Quando existe um ficheiro lateral do `session-end`
+para uma sessão exportada (`<verdicts-dir>/<session-id>.json`, por
+omissão `<data-dir>/redact`), ele é cruzado também: um veredito de hook
+`BLOCKED` ao lado de um export `CLEAN` é sinalizado como warning (o
+export foi redigido depois — ou descartou o conteúdo sinalizado) e segura
+o veredito geral em `REVIEW`. Entradas do índice apontando para ficheiros
+ausentes também são sinalizadas. Exit 0 só quando o veredito geral é
+`CLEAN`.
+
 ## O que é examinado
 
 Os alvos podem ser ficheiros ou diretórios; diretórios são percorridos
@@ -139,14 +225,24 @@ recursivamente. Cada ficheiro é despachado por tipo — detetado por extensão
   do [`devin-search`](https://github.com/Icaro0310/devin-search)
   (incluindo o `docs` FTS5) e o `memory.db` do
   [`devin-memory`](https://github.com/Icaro0310/devin-memory). Em dados
-  com formato `sessions.db` a camada semântica de tool-calls e a extração
-  de `project_name` também se aplicam; as outras stores recebem o scan
-  genérico de colunas de texto.
+  com formato `sessions.db` a camada semântica de tool-calls, a extração
+  de `project_name` e a passagem cross-chunk também se aplicam; as outras
+  stores recebem o scan genérico de colunas de texto.
 - **Ficheiros de texto** — notas `.md` (incluindo um dir de export do
   `devin-history`, cujas notas se chamam `<YYYY-MM-DD>_<session-id>.md`),
   exports `.json`/`.jsonl`, `.env`, logs — são examinados por inteiro; os
   findings trazem número de linha.
 - **Ficheiros binários** são ignorados e reportados em `errors`.
+
+Em stores com formato `sessions.db` corre ainda uma **passagem
+cross-chunk** limitada: segredos divididos entre dois payloads adjacentes
+(metade de uma chave AWS no fim do output de uma tool, o resto no início
+da mensagem seguinte) remontam-se quando os payloads são concatenados. A
+passagem re-examina concatenações de `tool_call_json`+
+`tool_call_update_json` da mesma linha de `tool_call_state`, linhas
+adjacentes de `tool_call_state`/`message_nodes` **da mesma sessão** e
+partes de streaming dentro de um payload — reportando o achado no rowid
+mais antigo com `kind="cross-chunk"`.
 
 O `redact` usa o mesmo dispatch: stores SQLite derivadas também são
 regraváveis com `--apply`, com as mesmas garantias de `.bak` + transação +
@@ -170,9 +266,11 @@ plataforma.
 ## Limitações
 
 - **Falsos negativos existem.** É um scanner por padrões, não uma garantia.
-  Segredos em formatos incomuns, encodings estranhos ou divididos em chunks
-  vão passar. Corre também `gitleaks`/`trufflehog` — isto complementa-os,
-  não os substitui.
+  Segredos em formatos incomuns ou encodings estranhos vão passar.
+  Divisões em chunks só são apanhadas entre payloads adjacentes da mesma
+  sessão — um segredo espalhado por linhas não-adjacentes, entre sessões
+  ou em três ou mais pedaços continua a escapar. Corre também
+  `gitleaks`/`trufflehog` — isto complementa-os, não os substitui.
 - **Falsos positivos existem.** O matching de `.env` por palavra-chave pode
   marcar assignments benignos; códigos de pareamento só são marcados com
   contexto explícito.
@@ -192,14 +290,17 @@ plataforma.
   cobre nomes comuns (`.env*`, `credentials*`, `*.pem`, `~/.ssh`, `~/.aws`,
   …); um ficheiro com segredos e nome incomum lido via `cat` não é marcado
   — os padrões continuam a aplicar-se ao output.
-- **Escopo M2.** `scan`, `redact` e `verify` funcionam. Ainda fora:
-  integração `devin-history`, publicação PyPI, hook `SessionEnd`, skill
-  `/redact`.
+- **Escopo M2.** `scan`, `redact`, `verify`, `gate`, `sessionend-scan`,
+  `session-end` e `verify-publish`
+  funcionam. Ainda fora: publicação PyPI, skill `/redact`. Achados
+  cross-chunk são só deteção — o `redact` mascara correspondências por
+  célula e não consegue regravar um segredo remontado em duas metades;
+  revê esses achados manualmente.
 
 ## Quando usar
 
 - Você está prestes a partilhar ou publicar dados de sessões Devin — um export, um bug report, uma base demo — e precisa de limpar segredos e PII primeiro.
-- Você quer um gate pré-publicação: `devin-redact verify` sai com 0 apenas quando o alvo está `CLEAN`, por isso encaixa diretamente em CI.
+- Você quer um gate pré-publicação: `devin-redact verify` sai com 0 apenas quando o alvo está `CLEAN`, por isso encaixa diretamente em CI — ou `devin-redact gate` quando só segredos devem bloquear (sai 1 em `BLOCKED`, 0 em `CLEAN`/`REVIEW`), que é o que o `devin-history` pode consumir via o campo top-level `publication_status` do relatório.
 - Você precisa de redação dentro do próprio `sessions.db`, não só em texto exportado — ele reescreve as células SQLite no lugar.
 - Você quer achados que um scanner de regex simples não apanha: um tool call `cat .env` marca o seu output como sensível via `tool_call_state.rawInput` mesmo quando o output não corresponde a nenhum padrão.
 
@@ -217,7 +318,7 @@ plataforma.
 
 **O que significa o veredito de publicação?** `publication_status` é `BLOCKED` quando existe qualquer achado de classe segredo, `REVIEW` quando só existem achados de PII/higiene, e `CLEAN` quando nada foi encontrado. `verify` sai 0 apenas em `CLEAN`. O relatório traz previews mascarados e fingerprints sha256 — nunca o segredo em si.
 
-**Ele apanha todos os segredos?** Não. É um scanner heurístico por padrões mais uma camada semântica para leituras de ficheiros sensíveis — formatos invulgares, encodings ou segredos divididos entre chunks serão perdidos. Trate-o como um forte complemento ao `gitleaks`/`trufflehog`, não como substituto.
+**Ele apanha todos os segredos?** Não. É um scanner heurístico por padrões mais uma camada semântica para leituras de ficheiros sensíveis — formatos invulgares ou encodings serão perdidos, e segredos divididos em chunks só são apanhados quando caem em payloads adjacentes da mesma sessão. Trate-o como um forte complemento ao `gitleaks`/`trufflehog`, não como substituto.
 
 ## Licença
 

@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import __version__, engine
+from . import __version__, engine, paths, publish, session_end
 from .sarif import report_to_sarif
 
 
@@ -45,7 +45,99 @@ def _build_parser() -> argparse.ArgumentParser:
     verify_p = sub.add_parser("verify", help="publication gate — non-zero exit unless CLEAN")
     verify_p.add_argument("paths", nargs="+", type=Path, help="files or directories to verify")
     verify_p.add_argument("--json", action="store_true", help="print the full JSON report")
+
+    gate_p = sub.add_parser(
+        "gate",
+        help="machine gate — prints just CLEAN/REVIEW/BLOCKED; "
+        "exits 0 for CLEAN/REVIEW, 1 for BLOCKED, 2 on error",
+    )
+    gate_p.add_argument("paths", nargs="+", type=Path, help="files or directories to gate")
+
+    hook_p = sub.add_parser(
+        "sessionend-scan",
+        help="SessionEnd hook handler — read-only scan of the default "
+        "sessions.db, prints one compact verdict line, exits 0 "
+        "unless a hard error occurs",
+    )
+    hook_p.add_argument(
+        "path",
+        nargs="?",
+        type=Path,
+        default=None,
+        help="sessions.db to scan (default: auto-detect Devin's store)",
+    )
+    hook_p.add_argument(
+        "--session-id",
+        default=None,
+        help="restrict the scan to this session's rows — the bounded "
+        "mode for a SessionEnd handler that knows which session ended",
+    )
+
+    se_p = sub.add_parser(
+        "session-end",
+        help="SessionEnd hook — resolve the just-ended session, scan its "
+        "messages and write a verdict side file (fail-soft, exits 0 "
+        "even on SKIPPED/BLOCKED)",
+    )
+    se_p.add_argument(
+        "--session-id",
+        default=None,
+        help="session to scan (default: {\"session_id\": …} on stdin, then "
+        "DEVIN_SESSION_ID, then the most recently active session)",
+    )
+    se_p.add_argument(
+        "--sessions-db",
+        type=Path,
+        default=None,
+        help="sessions.db to read (default: auto-detect Devin's store)",
+    )
+    se_p.add_argument(
+        "--data-dir",
+        type=Path,
+        default=None,
+        help="Devin data root for side files (default: the resolved "
+        "store's root or DEVIN_REDACT_DATA_DIR)",
+    )
+    se_p.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="verdict side file (default: <data-dir>/redact/<session-id>.json)",
+    )
+    se_p.add_argument(
+        "--json",
+        action="store_true",
+        help="also print the verdict JSON to stdout",
+    )
+
+    vp_p = sub.add_parser(
+        "verify-publish",
+        help="gate a devin-history export dir — non-zero exit unless "
+        "every exported session scans CLEAN",
+    )
+    vp_p.add_argument("export_dir", type=Path, help="devin-history export directory")
+    vp_p.add_argument(
+        "--verdicts-dir",
+        type=Path,
+        default=None,
+        help="dir of session-end verdict side files to cross-reference "
+        "(default: <data-dir>/redact)",
+    )
+    vp_p.add_argument("--json", action="store_true", help="print the full JSON report")
     return parser
+
+
+def _blocking_errors(report: dict) -> list[dict]:
+    """Errors meaning a target could not be scanned at all.
+
+    ``skipped: binary file`` entries are informational — the scan still
+    covered everything else — so they never count as hard errors.
+    """
+    return [
+        e
+        for e in report.get("errors", [])
+        if not str(e.get("error", "")).startswith("skipped:")
+    ]
 
 
 def _emit(report: dict, report_path: Path | None) -> None:
@@ -95,6 +187,106 @@ def main(argv: list[str] | None = None) -> int:
             )
             for cat, n in report["by_category"].items():
                 print(f"  {cat}: {n}")
+        return 0 if report["publication_status"] == "CLEAN" else 1
+
+    if args.command == "gate":
+        report = engine.scan(args.paths)
+        hard = _blocking_errors(report)
+        if hard:
+            for e in hard:
+                print(f"devin-redact: {e['file']}: {e['error']}", file=sys.stderr)
+            return 2
+        status = str(report["publication_status"])
+        print(status)
+        return 1 if status == "BLOCKED" else 0
+
+    if args.command == "sessionend-scan":
+        target = args.path if args.path is not None else paths.default_sessions_db()
+        if args.path is not None and not args.path.is_file():
+            print(f"devin-redact: not a file: {args.path}", file=sys.stderr)
+            return 2
+        if target is None:
+            # No sessions.db on this machine — nothing to scan; a hook
+            # must not fail over that, so the verdict is CLEAN.
+            print("devin-redact: findings=0 publication_status=CLEAN")
+            return 0
+        if args.session_id:
+            report = engine.scan_session(target, args.session_id)
+        else:
+            report = engine.scan([target])
+        hard = _blocking_errors(report)
+        if hard:
+            for e in hard:
+                print(f"devin-redact: {e['file']}: {e['error']}", file=sys.stderr)
+            return 2
+        print(
+            f"devin-redact: findings={report['findings_total']} "
+            f"publication_status={report['publication_status']}"
+        )
+        return 0
+
+    if args.command == "session-end":
+        if args.sessions_db is not None and not args.sessions_db.is_file():
+            print(
+                f"devin-redact: not a file: {args.sessions_db}", file=sys.stderr
+            )
+            return 2
+        stdin_text = None
+        if args.session_id is None and not sys.stdin.isatty():
+            try:
+                stdin_text = sys.stdin.read(session_end._STDIN_CAP) or None
+            except OSError:
+                stdin_text = None
+        verdict = session_end.run_hook(
+            session_id=args.session_id,
+            sessions_db=args.sessions_db,
+            data_dir=args.data_dir,
+            out=args.out,
+            stdin_text=stdin_text,
+        )
+        if args.json:
+            _emit(verdict, None)
+        else:
+            print(
+                f"devin-redact: session={verdict['session_id'] or '?'} "
+                f"publication_status={verdict['publication_status']} "
+                f"verdict={verdict['verdict_file']}"
+            )
+            if verdict.get("reason"):
+                print(f"devin-redact: {verdict['reason']}", file=sys.stderr)
+        # Fail-soft: SKIPPED and even BLOCKED still exit 0 — a SessionEnd
+        # hook must never block session teardown.
+        return 0
+
+    if args.command == "verify-publish":
+        if not args.export_dir.is_dir():
+            print(
+                f"devin-redact: not a directory: {args.export_dir}",
+                file=sys.stderr,
+            )
+            return 2
+        report = publish.verify_publish(
+            args.export_dir, verdicts_dir=args.verdicts_dir
+        )
+        if args.json:
+            _emit(report, None)
+        else:
+            print(f"PUBLICATION STATUS: {report['publication_status']}")
+            print(
+                f"{report['sessions_total']} exported session(s): "
+                f"{report['sessions_clean']} clean, "
+                f"{report['sessions_review']} review, "
+                f"{report['sessions_blocked']} blocked"
+            )
+            for s in report["sessions"]:
+                if s["publication_status"] != "CLEAN":
+                    print(
+                        f"  {s['publication_status']}: {s['file']} "
+                        f"(session {s['session_id'] or '?'}) — "
+                        f"{s['findings_total']} finding(s)"
+                    )
+            for w in report["warnings"]:
+                print(f"  warning: {w}")
         return 0 if report["publication_status"] == "CLEAN" else 1
 
     return 2
