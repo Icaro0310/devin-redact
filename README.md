@@ -13,7 +13,7 @@
 > **Unofficial community project.** Not affiliated with, endorsed by, or
 > sponsored by Cognition AI. "Devin" is a trademark of Cognition AI.
 
-**[Português (BR)](README.pt-BR.md)** · English
+**[Windows](README.windows.md)** · **[Linux](README.linux.md)** · English
 
 Secret and PII redaction that understands Devin tool-call semantics —
 in-place in `sessions.db`, not just flat text.
@@ -63,7 +63,7 @@ test.
 Python ≥ 3.10 and `pipx` are required. **Windows (PowerShell):** install `pipx` with `py -m pip install --user pipx`, run `py -m pipx ensurepath`, then reopen the terminal. **Linux (Debian/Ubuntu):** run `sudo apt install pipx python3-venv` and `pipx ensurepath`; reopen the terminal. Other Linux distributions should install `pipx` using their package manager.
 
 ```bash
-pipx install "devin-redact @ git+https://github.com/Icaro0310/devin-redact.git"
+pipx install "devin-redact==0.2.0"
 ```
 
 For development:
@@ -120,7 +120,7 @@ devin-redact verify-publish exports/ --json
 No Devin installed? Try it on a synthetic fixture:
 
 ```bash
-pipx install "git+https://github.com/Icaro0310/devin-internals-spec"
+pipx install "devin-internals-spec==0.3.0"
 devin-inspect make-fixture /tmp/fx
 devin-redact scan /tmp/fx/cli/sessions.db
 ```
@@ -287,10 +287,10 @@ always an explicit argument, so there are no platform-specific paths.
   secret-bearing file with an unusual name read via `cat` will not be
   flagged — pattern matching still applies to its output.
 - **M2 scope.** `scan`, `redact`, `verify`, `gate`, `sessionend-scan`,
-  `session-end` and `verify-publish` work. Still out: PyPI publish,
-  `/redact` skill. Cross-chunk findings are detection-only — `redact`
-  masks per-cell matches and cannot rewrite a reassembled split secret
-  back into two halves; review those findings manually.
+  `session-end` and `verify-publish` work; the package is available on PyPI.
+  Still out: the `/redact` skill. Cross-chunk findings are detection-only —
+  `redact` masks per-cell matches and cannot rewrite a reassembled split
+  secret back into two halves; review those findings manually.
 
 ## When to use this
 
