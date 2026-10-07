@@ -11,7 +11,7 @@ devin-redact solves the problem that agent transcripts accumulate secrets (a `ca
 
 ## Key commands
 
-- `pipx install "devin-redact @ git+https://github.com/Icaro0310/devin-redact.git"`: install (Python >= 3.10, pure stdlib)
+- `uv tool install devin-redact  # or: pipx install devin-redact`: install (Python >= 3.10, pure stdlib)
 - `devin-redact scan path/to/sessions.db exports/ .env`: read-only scan, prints the JSON report
 - `devin-redact scan sessions.db --report report.json`: same, plus write the report to a file
 - `devin-redact redact sessions.db`: dry-run redact, shows exactly what would change, modifies nothing
