@@ -29,7 +29,7 @@ devin-redact solves the problem that agent transcripts accumulate secrets (a `ca
 
 ## Related
 
-- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [devin-ecosystem](https://icaro0310.github.io/): the tool ecosystem this belongs to
 - [devin-history](https://github.com/Icaro0310/devin-history): produces the exports this scans before sharing
 - [devin-backup](https://github.com/Icaro0310/devin-backup): recommended safety net before `--apply`
 - [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): documents the stores this reads and writes
