@@ -13,7 +13,7 @@ Corporate Windows is a local-only environment: no Devin VM, QwenPaw, Slack depen
 Install the isolated Python CLI:
 
 ```powershell
-uv tool install "devin-redact==0.2.0"
+uv tool install "devin-redact"
 ```
 
 ## Devin paths
