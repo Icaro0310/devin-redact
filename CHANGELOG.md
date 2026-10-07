@@ -63,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `gate`/`session-end` exit codes and verdict contracts, `verify-publish`
   over md/json export layouts, path auto-detection. 100 tests green.
 
+### Changed
+
+- `llms.txt` no longer states a hard-coded ecosystem size; the registry owns the count.
+
 ## [0.2.0] - 2026-09-29
 
 ### Added
