@@ -19,8 +19,9 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
-> For: security engineers, developers  
-> Interface: CLI / Python library
+> For: Security engineers, Developers  
+> Interface: CLI / Python library  
+> Path: Security engineers · step 2/3 — after `devin-backup`, before `devin-janitor`
 <!-- DEVIN-ECO:END -->
 
 
