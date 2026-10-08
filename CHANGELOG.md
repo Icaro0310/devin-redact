@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - README gains the generated `Part of the DEVIN ecosystem` block
   (track/nature/audience/interface rendered from the registry).
+- Test fixtures are allowlisted via `.secrets-scan-allow`
+  (`path sha256=<hash>` entries) now that the shared secrets-scan drops
+  its blanket `fixtures` directory exclusion.
 
 - `labeler.yml` is now a thin caller of the shared reusable workflow in `devin-powerups` (`@v1`); PR labeling behavior is unchanged.
 
