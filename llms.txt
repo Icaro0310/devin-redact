@@ -6,8 +6,8 @@ devin-redact solves the problem that agent transcripts accumulate secrets (a `ca
 
 ## Docs
 
-- [README](https://github.com/Icaro0310/devin-redact/blob/main/README.md): full documentation
-- [SPEC](https://github.com/Icaro0310/devin-redact/blob/main/docs/SPEC.md): report contract and detection categories
+- [README](https://github.com/Icaro0310/devin-state/blob/main/README.md): full documentation
+- [SPEC](https://github.com/Icaro0310/devin-state/blob/main/docs/SPEC.md): report contract and detection categories
 
 ## Key commands
 

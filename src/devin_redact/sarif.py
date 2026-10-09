@@ -18,7 +18,7 @@ from .patterns import PATTERNS
 
 SARIF_VERSION = "2.1.0"
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
-INFORMATION_URI = "https://github.com/Icaro0310/devin-redact"
+INFORMATION_URI = "https://github.com/Icaro0310/devin-state"
 
 # Categories reported by the scan that are not regex patterns.
 _EXTRA_CATEGORIES = ("sensitive_tool_output", "project_name")
