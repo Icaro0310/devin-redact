@@ -1,4 +1,4 @@
-# devin-redact — Linux guide
+# devin-state — Linux guide
 
 This guide covers Linux setup only. See [README.md](README.md) for features, shared commands, limitations, and the safety model.
 
