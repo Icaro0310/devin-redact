@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: devin-backup
+authors:
+  - family-names: Galvao
+    given-names: Icaro
+url: "https://github.com/Icaro0310/devin-backup"
+repository-code: "https://github.com/Icaro0310/devin-backup"
+license: MIT
+abstract: "Safe backup and restore for Devin Desktop stores: SQLite-consistent snapshots of sessions.db, acp-messages, state.vscdb and .devin/ config, with integrity verification and rotation."
+keywords: [devin, backup, restore, sqlite, snapshot, data-safety]
