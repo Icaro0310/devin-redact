@@ -1,0 +1,26 @@
+name: test-janitor
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/janitor/**'
+      - 'shared/install-scheduler/**'
+      - '.github/workflows/test-janitor.yml'
+  pull_request:
+    paths:
+      - 'packages/janitor/**'
+      - 'shared/install-scheduler/**'
+      - '.github/workflows/test-janitor.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: Icaro0310/devin-powerups/.github/workflows/python-test.yml@v1
+    with:
+      package-dir: packages/janitor
+      pre-install: -e shared/install-scheduler

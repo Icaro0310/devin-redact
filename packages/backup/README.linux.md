@@ -1,4 +1,4 @@
-# devin-redact — Linux guide
+# devin-backup — Linux guide
 
 This guide covers Linux setup only. See [README.md](README.md) for features, shared commands, limitations, and the safety model.
 
@@ -13,7 +13,7 @@ Linux uses the extended runtime: local execution plus optional Devin VM/QwenPaw 
 Install the isolated Python CLI:
 
 ```bash
-uv tool install 'devin-redact'
+uv tool install 'devin-backup'
 ```
 
 ## Devin paths
@@ -35,6 +35,17 @@ Use the tool's documented `--data-dir` or `--config-dir` flags for non-default l
 - **Headless and minimal environments:** no display is needed — every CLI is text-only. In containers or WSL, install `uv` and Git and follow the same steps; `XDG_*` paths resolve normally.
 - **Permissions:** tools read Devin data under `$XDG_DATA_HOME/devin` and write only their own config/state — no root or sudo is required.
 - **Scheduling:** optional recurring work belongs to `systemd --user` timers or cron; installation never creates jobs.
+
+## Recurring runs (optional)
+
+_Nightly snapshot; pair with a weekly `devin-backup rotate --keep 10 --yes`. Or let the tool self-schedule with `devin-backup install` (cron / Task Scheduler / elapsed backends)._
+
+```cron
+15 3 * * * devin-backup create --out ~/backups
+```
+
+Equivalent `systemd --user` timer works too; enable lingering if it must run without a login session.
+
 
 ## Troubleshooting
 

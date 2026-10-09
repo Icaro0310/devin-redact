@@ -1,4 +1,4 @@
-# devin-redact — Personal Windows guide
+# devin-janitor — Personal Windows guide
 
 This guide covers unrestricted Windows setup. For restricted machines, see [README.corporate-windows.md](README.corporate-windows.md); for features, shared commands, limitations, and the safety model, see [README.md](README.md).
 
@@ -13,7 +13,7 @@ Personal Windows uses the extended runtime: local execution plus optional Devin 
 Install the isolated Python CLI:
 
 ```powershell
-uv tool install "devin-redact"
+uv tool install "devin-janitor"
 ```
 
 ## Devin paths
@@ -34,6 +34,17 @@ Use the tool's documented `--data-dir` or `--config-dir` flags for non-default l
 - **Install location:** executables live under `%USERPROFILE%\.local\bin`; data under `%APPDATA%\devin`. Nothing touches `Program Files` or the registry.
 - **WSL:** treat it as a Linux machine — follow [README.linux.md](README.linux.md) inside it.
 - **Uninstall:** `uv tool uninstall <package>` (or `npm uninstall -g` for a Node.js tool) removes the CLI; delete `%APPDATA%\devin` to remove local data. No services or scheduled tasks are left behind.
+
+## Recurring runs (optional)
+
+_Daily cleanup. `devin-janitor install` registers the built-in daily report job (cron / Task Scheduler / elapsed hook) — prefer it over hand-rolled entries._
+
+```powershell
+schtasks /create /tn "devin-janitor" /tr "devin-janitor run --apply" /sc daily /st 04:00 /f
+```
+
+Runs under your account — no admin needed. Adjust `/sc`/`/st` (or `/sc onlogon` for daemons) to taste.
+
 
 ## Troubleshooting
 

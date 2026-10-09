@@ -1,8 +1,8 @@
 name: ci
 
-# Thin caller: the test and secrets-scan jobs live in the control plane
-# (Icaro0310/devin-powerups/.github/workflows, tag @v1). Repos whose ci.yml
-# diverges from the shared shape are documented in VARIANTS.md there.
+# Secrets scan runs on every change; per-package test workflows
+# (test-*.yml) are scoped by path so a change under packages/x/ runs
+# only that package's suite plus the integration suite where relevant.
 
 on:
   push:
@@ -13,11 +13,6 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    permissions:
-      contents: read
-    uses: Icaro0310/devin-powerups/.github/workflows/python-test.yml@v1
-
   secrets-scan:
     permissions:
       contents: read
