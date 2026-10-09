@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from devin_internals.schema import SchemaError
@@ -92,7 +92,7 @@ def append_log(log_file: str | Path, entry: dict) -> None:
 
 def _fmt_target(row: SessionRow, why: str) -> str:
     dt = (
-        datetime.fromtimestamp(row.created).strftime("%Y-%m-%d")
+        datetime.fromtimestamp(row.created, tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
         if row.created
         else "----------"
     )
@@ -594,12 +594,12 @@ def _fmt_span(oldest: float | None, newest: float | None) -> str:
     if oldest is None and newest is None:
         return "-"
     a = (
-        datetime.fromtimestamp(oldest).strftime("%Y-%m-%d")
+        datetime.fromtimestamp(oldest, tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
         if oldest
         else ""
     )
     b = (
-        datetime.fromtimestamp(newest).strftime("%Y-%m-%d")
+        datetime.fromtimestamp(newest, tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
         if newest
         else ""
     )
@@ -612,9 +612,9 @@ def render_space_report(report: dict) -> str:
     """Human-readable table for ``devin-janitor report``."""
     totals = report["totals"]
     lines = [
-        f"REPORT · {fmt_bytes(totals['bytes'])} across "
-        f"{len(report['stores'])} stores · "
-        f"~{fmt_bytes(totals['recoverable_bytes'])} recoverable",
+        (f"REPORT · {fmt_bytes(totals['bytes'])} across "
+         f"{len(report['stores'])} stores · "
+         f"~{fmt_bytes(totals['recoverable_bytes'])} recoverable"),
         "",
     ]
     for s in report["stores"]:

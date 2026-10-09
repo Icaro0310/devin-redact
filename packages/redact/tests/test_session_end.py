@@ -16,7 +16,6 @@ from pathlib import Path
 
 import devin_redact
 from devin_redact import cli, session_end
-
 from test_scan import FAKE_API_KEY, _fp
 
 SCHEMA = """
@@ -123,7 +122,7 @@ def test_stdin_json_payload_resolution(tmp_path, monkeypatch):
     code = _run(
         ["session-end", "--sessions-db", str(db), "--data-dir", str(data)],
         monkeypatch,
-        stdin_text='{"session_id": "%s", "hook": "SessionEnd"}' % DIRTY_SID,
+        stdin_text=f'{{"session_id": "{DIRTY_SID}", "hook": "SessionEnd"}}',
     )
     assert code == 0
     verdict = _verdict_file(data / "redact" / f"{DIRTY_SID}.json")

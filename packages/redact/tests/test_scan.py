@@ -5,9 +5,8 @@ import json
 import sqlite3
 from pathlib import Path
 
-import pytest
-
 import devin_redact
+import pytest
 from devin_redact import cli
 from devin_redact.engine import scan_text
 

@@ -2,9 +2,8 @@ import json
 import sqlite3
 
 import pytest
-from devin_internals import fixtures
-
 from devin_backup import restore, snapshot
+from devin_internals import fixtures
 
 
 def _manifest(snap):

@@ -25,7 +25,7 @@ class DevinPaths:
     session_locks_dir: Path
 
     @classmethod
-    def from_root(cls, root: str | Path) -> "DevinPaths":
+    def from_root(cls, root: str | Path) -> DevinPaths:
         root = Path(root).expanduser()
         return cls(
             root=root,

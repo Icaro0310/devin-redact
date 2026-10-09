@@ -3,7 +3,6 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from devin_install_scheduler import install as sched
 from devin_install_scheduler import install_daily
 

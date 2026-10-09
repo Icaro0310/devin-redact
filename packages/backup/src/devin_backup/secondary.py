@@ -15,7 +15,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from devin_backup.snapshot import MANIFEST_NAME, SnapshotError, load_manifest
+from devin_backup.snapshot import SnapshotError, load_manifest
 from devin_backup.verify import verify_snapshot
 
 

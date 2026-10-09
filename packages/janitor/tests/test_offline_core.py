@@ -26,7 +26,6 @@ import json
 import socket
 
 import pytest
-
 from conftest import add_gui_session, add_session
 from devin_janitor.cli import main
 

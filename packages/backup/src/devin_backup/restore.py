@@ -28,7 +28,6 @@ from devin_backup.snapshot import (
     MANIFEST_NAME,
     MANIFEST_VERSION,
     PRE_RESTORE_PREFIX,
-    SnapshotError,
     _copy_store,
     _unique_dir,
     load_manifest,

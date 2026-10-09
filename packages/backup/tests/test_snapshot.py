@@ -5,10 +5,9 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from devin_internals import fixtures
-
 from devin_backup import snapshot
 from devin_backup.stores import discover_stores
+from devin_internals import fixtures
 
 EXPECTED_STORES = 5  # sessions.db + 2 acp-messages + state.vscdb + .devin/config.json
 

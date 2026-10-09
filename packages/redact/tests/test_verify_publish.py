@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 
 from devin_redact import cli, publish
-
 from test_scan import FAKE_API_KEY, FAKE_GITHUB_TOKEN
 
 DIRTY_SID = "sess-dirty1"

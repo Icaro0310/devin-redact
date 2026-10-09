@@ -16,7 +16,6 @@ import sqlite3
 from pathlib import Path
 
 import devin_redact
-
 from test_scan import _fp
 
 # Canonical AWS documentation example key — synthetic by definition.

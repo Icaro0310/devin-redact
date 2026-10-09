@@ -5,13 +5,11 @@ import shutil
 import sqlite3
 from pathlib import Path
 
-import pytest
-
 import devin_redact
+import pytest
 from devin_redact import cli, engine
 from devin_redact.engine import redact_text
 from devin_redact.semantic import analyze_tool_call_json
-
 from test_scan import (
     CORPUS,
     FAKE_API_KEY,

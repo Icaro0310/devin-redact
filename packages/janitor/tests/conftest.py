@@ -20,7 +20,6 @@ from devin_internals.fixtures import (
     ACP_MESSAGES_DDL,
     create_sessions_db,
 )
-
 from devin_janitor.paths import DevinPaths
 
 NOW_S = time.time()
