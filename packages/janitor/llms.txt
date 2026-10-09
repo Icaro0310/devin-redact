@@ -1,0 +1,32 @@
+# devin-janitor
+
+> Lifecycle janitor for Devin sessions: export first, classify into tiers, delete only the safe tiers, retry locked files, and vacuum only when Devin is closed.
+
+devin-janitor solves the problem that daily Devin Desktop use accumulates session pollution — empty sessions, automation/eval noise, one-shot heartbeat cycles, duplicates (roughly 55% of all sessions on a real install) — which bloats `sessions.db` and `User/acp-messages/` and drowns real work in the session list. Devin ships no built-in lifecycle management, and deleting rows blindly is dangerous: locked files, open databases and ambiguous sessions all need handling. It knows the real stores via `devin-internals-spec` (schema-version gated), exports transcripts before deleting via a `--export-cmd` hook that aborts the whole run on failure, classifies sessions into tiers with rules (plus a pluggable `--judge command:<cmd>` for ambiguous ones, fail-open by default), retries locked deletions through a pending queue instead of force-killing Devin, and runs `VACUUM` only when Devin is closed. `run` is a dry-run until `--apply`. Unofficial community tooling, not affiliated with Cognition AI.
+
+## Docs
+
+- [README](https://github.com/Icaro0310/devin-janitor/blob/main/README.md): full documentation
+- [SPEC](https://github.com/Icaro0310/devin-janitor/blob/main/docs/SPEC.md): classification tiers and pipeline details
+
+## Key commands
+
+- `pipx install "devin-janitor @ git+https://github.com/Icaro0310/devin-janitor.git"`: install (Python >= 3.10)
+- `devin-janitor scan`: classification preview (`--json` for machine-readable)
+- `devin-janitor run`: dry-run; prints the exact plan, writes nothing
+- `devin-janitor run --apply --grace-hours 72 --export-cmd "devin-history export"`: safe recipe — archive transcripts, then delete safe tiers
+- `devin-janitor run --judge "command:python my_judge.py"`: plug in your own judge for ambiguous sessions (default `none` is rules-only, fail-open)
+- `devin-janitor pending --list` / `devin-janitor pending --retry`: inspect or retry locked deletions queued for later
+- `devin-janitor report`: advisory recoverable-space report across all stores (`--json` for machine-readable); read-only, always exits 0
+
+## When to use / when not
+
+- Use when: your session list is drowning in empty/automation/duplicate noise; you want session cleanup that archives transcripts first (`--export-cmd`); you want a dry-run plan and tiered classification instead of blind deletion; you want locked files retried later rather than Devin force-killed.
+- Not when: you want ambiguous sessions auto-judged by an LLM out of the box (the default `--judge none` keeps everything ambiguous — fail-open — unless you plug a judge command in); you need to clean checkpoints, workspaces or `state.vscdb` keys (it deletes sessions only); your schema is beyond v17 (it stops loudly); you are unwilling to review a dry-run first — that review is the safety model.
+
+## Related
+
+- [devin-ecosystem](https://icaro0310.github.io/): the tool ecosystem this belongs to
+- [devin-history](https://github.com/Icaro0310/devin-history): the export tool `--export-cmd` is designed to call before deletion
+- [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): documents the stores and locks this operates on
+- [poordjaevin](https://github.com/Icaro0310/devin-judge): a Devin-native judge backend for ambiguous sessions via `--judge command:`

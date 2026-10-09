@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: devin-janitor
+authors:
+  - family-names: Galvao
+    given-names: Icaro
+url: "https://github.com/Icaro0310/devin-janitor"
+repository-code: "https://github.com/Icaro0310/devin-janitor"
+license: MIT
+abstract: "Lifecycle janitor for Devin sessions: export first, classify into tiers, delete only the safe tiers, retry locked files, and vacuum only when Devin is closed."
+keywords: [devin, session-lifecycle, cleanup, retention, sqlite, maintenance]

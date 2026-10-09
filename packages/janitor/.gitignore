@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+.env
+*.db
+*.db-shm
+*.db-wal
+
+# devin-janitor runtime state (protect list, retry queue, audit log)
+.devin/memory/
+.devin/janitor-pending.json
+.devin/janitor-keep.json
