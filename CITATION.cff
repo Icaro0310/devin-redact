@@ -5,8 +5,8 @@ title: devin-redact
 authors:
   - family-names: Galvao
     given-names: Icaro
-url: "https://github.com/Icaro0310/devin-redact"
-repository-code: "https://github.com/Icaro0310/devin-redact"
+url: "https://github.com/Icaro0310/devin-state"
+repository-code: "https://github.com/Icaro0310/devin-state"
 license: MIT
 abstract: "Secret and PII redaction that understands Devin tool-call semantics: scans sessions.db and export files for leaked credentials, then rewrites them in place in SQLite."
 keywords: [devin, redaction, secrets, pii, security, sqlite]

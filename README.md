@@ -2,18 +2,18 @@
 
 <img src="assets/banner.svg" alt="devin-redact" width="100%"/>
 
-<a href="https://github.com/Icaro0310/devin-redact/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-redact/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
+<a href="https://github.com/Icaro0310/devin-state/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-state/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
 <a href="https://pypi.org/project/devin-redact/"><img src="https://img.shields.io/pypi/v/devin-redact" alt="PyPI"/></a>
 
 
-<a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-redact"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-redact/badge" alt="OpenSSF Scorecard"/></a>
-<a href="https://deepwiki.com/Icaro0310/devin-redact"><img src="https://deepwiki.com/badge.svg" alt="DeepWiki"/></a>
+<a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-state"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-state/badge" alt="OpenSSF Scorecard"/></a>
+<a href="https://deepwiki.com/Icaro0310/devin-state"><img src="https://deepwiki.com/badge.svg" alt="DeepWiki"/></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+"/></a>
-<a href="https://github.com/Icaro0310/devin-redact"><img src="https://img.shields.io/github/stars/Icaro0310/devin-redact" alt="GitHub stars"/></a>
-<a href="https://github.com/Icaro0310/devin-redact/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-redact" alt="Last commit"/></a>
+<a href="https://github.com/Icaro0310/devin-state"><img src="https://img.shields.io/github/stars/Icaro0310/devin-state" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/devin-state/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-state" alt="Last commit"/></a>
 <a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
-<a href="https://github.com/Icaro0310/devin-redact/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
+<a href="https://github.com/Icaro0310/devin-state/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
 <!-- DEVIN-ECO:BEGIN -->
@@ -26,6 +26,8 @@
 
 
 # devin-redact
+
+> **Renamed (Oct 2026):** this repository moved from `Icaro0310/devin-redact` to `Icaro0310/devin-state`. The PyPI package and console script stay `devin-redact`; stars, issues and history are preserved by the redirect.
 
 > **Unofficial community project.** Not affiliated with, endorsed by, or
 > sponsored by Cognition AI. "Devin" is a trademark of Cognition AI.
