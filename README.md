@@ -251,7 +251,7 @@ Every file is dispatched by type — detected by extension **or** by content:
   text: [`devin-graph`](https://github.com/Icaro0310/devin-graph)'s
   `graph.db`, [`devin-search`](https://github.com/Icaro0310/devin-search)'s
   `search.db` (FTS5 `docs` included) and
-  [`devin-memory`](https://github.com/Icaro0310/devin-memory)'s
+  [`devin-memory`](https://github.com/Icaro0310/devin-brain)'s
   `memory.db`. On `sessions.db`-shaped data the tool-call semantic layer,
   `project_name` extraction and the cross-chunk pass also apply; other
   stores get the generic text-column scan.
