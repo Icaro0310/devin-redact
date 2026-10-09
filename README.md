@@ -10,6 +10,17 @@
 > Path: Security engineers · step 2/3 — after `devin-backup`, before `devin-janitor`
 <!-- DEVIN-ECO:END -->
 
+<!-- DEVIN-WHERE:BEGIN -->
+## Where this fits
+
+- **Job:** Control
+- **Product:** [`devin-state`](https://github.com/Icaro0310/devin-state)
+- **Packages:** `redact` · `backup` · `janitor`
+- **Mode:** mixed
+- **Foundation:** [`devin-internals-spec`](https://github.com/Icaro0310/devin-internals-spec)
+- **Ecosystem:** [`awesome-devin`](https://github.com/Icaro0310/awesome-devin) · registry: [`devin-powerups`](https://github.com/Icaro0310/devin-powerups)
+<!-- DEVIN-WHERE:END -->
+
 State safety for Devin Desktop: redact secrets from session stores, back
 them up verifiably, and prune sessions behind an export-then-delete
 pipeline.
