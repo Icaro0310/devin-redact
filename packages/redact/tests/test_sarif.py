@@ -5,11 +5,9 @@ The SARIF log must never contain the matched secret text — only rule ids
 """
 
 import json
-from pathlib import Path
 
 from devin_redact import cli, engine
 from devin_redact.sarif import SARIF_SCHEMA, SARIF_VERSION, report_to_sarif
-
 from test_scan import CORPUS, FIXTURES, PLANTED, _fp
 
 SECRET_SAMPLES = [v for values in PLANTED.values() for v in values]

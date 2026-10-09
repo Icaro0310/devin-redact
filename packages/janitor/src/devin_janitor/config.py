@@ -15,16 +15,16 @@ from typing import Any
 
 # Sessions whose titles match these are pure automation/eval noise.
 DEFAULT_NOISE_PATTERNS = [
-    r"judge tool|classif|support_triage|entailment|^\[\d+\]$|^\{\"items\"|"
+    (r"judge tool|classif|support_triage|entailment|^\[\d+\]$|^\{\"items\"|"
     r"^billing$|^BLOCKED$|SESSION_OK|echo.*test|sentinel|safe test command|"
-    r"heartbeat-probe|Lista.*(tools|ferramentas).*djaevin-local|tools MCP.*djaevin-local",
+    r"heartbeat-probe|Lista.*(tools|ferramentas).*djaevin-local|tools MCP.*djaevin-local"),
 ]
 
 # One-shot cycles whose durable knowledge lives elsewhere (slack-brain
 # sessions, heartbeat state, the vault, learned-* skills).
 DEFAULT_EPHEMERAL_PATTERNS = [
-    r"inbox|slack-bridge|slack bridge|Tarefa Slack|Processamento|"
-    r"Processar ficheiros|timeout ACP|heartbeat",
+    (r"inbox|slack-bridge|slack bridge|Tarefa Slack|Processamento|"
+    r"Processar ficheiros|timeout ACP|heartbeat"),
 ]
 
 # Title patterns that always keep a session (merged with the keep-file's own
@@ -65,7 +65,7 @@ class JanitorConfig:
     def _compile(patterns: list[str]) -> re.Pattern:
         # an empty pattern list must match NOTHING — "|".join([]) compiles
         # to "" which matches every string
-        return re.compile("|".join(patterns) if patterns else r"$^", re.I)
+        return re.compile("|".join(patterns) if patterns else r"$^", re.IGNORECASE)
 
     @property
     def noise_re(self) -> re.Pattern:
@@ -80,7 +80,7 @@ class JanitorConfig:
         return self._compile(pats)
 
     @classmethod
-    def load(cls, path: str | Path | None) -> "JanitorConfig":
+    def load(cls, path: str | Path | None) -> JanitorConfig:
         """Defaults merged with a JSON config file, if given.
 
         Unknown keys are ignored so a config written for a newer version
@@ -90,7 +90,7 @@ class JanitorConfig:
         if path is None:
             return cfg
         data = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
-        known = {f for f in cfg.__dataclass_fields__}  # noqa: SLF001
+        known = {f for f in cfg.__dataclass_fields__}
         for key, value in data.items():
             if key in known:
                 setattr(cfg, key, value)

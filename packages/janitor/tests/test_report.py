@@ -1,6 +1,7 @@
 import json
 import sys
 
+from conftest import add_gui_session, add_session
 from devin_janitor.cli import main
 from devin_janitor.inventory import SessionRow
 from devin_janitor.paths import DevinPaths
@@ -13,7 +14,6 @@ from devin_janitor.report import (
     space_report,
 )
 from devin_janitor.tiers import Classification
-from conftest import add_gui_session, add_session
 
 
 def _row(sid: str) -> SessionRow:

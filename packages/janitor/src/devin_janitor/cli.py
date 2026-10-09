@@ -17,9 +17,8 @@ import sqlite3
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import asdict
-from pathlib import Path
-from typing import Sequence
 
 from devin_internals.schema import SchemaError
 
@@ -59,7 +58,7 @@ from devin_janitor.report import (
     run_summary,
     space_report,
 )
-from devin_janitor.tiers import Tier, classify, load_keep_file
+from devin_janitor.tiers import classify, load_keep_file
 
 DEFAULT_KEEP_FILE = ".devin/janitor-keep.json"
 DEFAULT_PENDING_FILE = ".devin/janitor-pending.json"
@@ -414,7 +413,7 @@ def cmd_report(args: argparse.Namespace) -> int:
             labels_path=args.labels_file,
             exclude_labeled=args.exclude_labeled,
         )
-    except Exception as exc:  # advisory — must never fail the command
+    except Exception as exc:  # noqa: BLE001 - advisory — must never fail the command
         rep = {
             "stores": [],
             "totals": {"bytes": 0, "recoverable_bytes": 0},

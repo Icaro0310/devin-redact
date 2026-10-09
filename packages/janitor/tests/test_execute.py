@@ -1,6 +1,6 @@
-import os
 import sqlite3
 
+from conftest import add_gui_session, add_session
 from devin_janitor.execute import (
     delete_gui_files,
     delete_session_rows,
@@ -11,7 +11,6 @@ from devin_janitor.execute import (
     vacuum_if_safe,
 )
 from devin_janitor.inventory import load_inventory
-from conftest import add_gui_session, add_session
 
 
 def test_delete_session_rows_removes_everything(devin_dir):

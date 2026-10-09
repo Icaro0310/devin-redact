@@ -21,7 +21,7 @@ from pathlib import Path
 
 from devin_internals.schema import detect_schema_version
 
-from devin_janitor.inventory import SessionRow, live_session_ids
+from devin_janitor.inventory import SessionRow
 from devin_janitor.paths import DevinPaths
 
 # Message-bearing tables cleaned per session before the sessions row.
@@ -136,13 +136,13 @@ def devin_running() -> bool:
         if sys.platform.startswith("win"):
             out = subprocess.run(
                 ["tasklist", "/FI", "IMAGENAME eq Devin.exe", "/FO", "CSV"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=20,
             ).stdout
             return out.count("Devin.exe") > 1
         out = subprocess.run(
-            ["pgrep", "-fi", "devin"], capture_output=True, timeout=20
+            ["pgrep", "-fi", "devin"], capture_output=True, timeout=20, check=False
         )
         return out.returncode == 0
     except (OSError, subprocess.TimeoutExpired):
@@ -191,9 +191,9 @@ def apply_deletions(
             files = list(paths.acp_messages_dir.glob(f"{row.id}.db*")) if (
                 paths.acp_messages_dir.is_dir()
             ) else []
-            if row.origin == "gui" or files:
-                if delete_gui_files(paths.acp_messages_dir, row.id, pending):
-                    stats["gui_sessions"] += 1
+            if (row.origin == "gui" or files) \
+                    and delete_gui_files(paths.acp_messages_dir, row.id, pending):
+                stats["gui_sessions"] += 1
         retry_pending(paths.acp_messages_dir, pending)
         con.commit()
     finally:

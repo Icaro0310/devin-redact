@@ -5,17 +5,14 @@ import hashlib
 import json
 import sqlite3
 import subprocess
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-
-from devin_internals.fixtures import STATE_VSCDB_DDL
-
+from conftest import NOW_S, add_gui_session, add_session
 from devin_install_scheduler import install as _sched
+from devin_internals.fixtures import STATE_VSCDB_DDL
 from devin_janitor import install
-from devin_janitor.cli import main
 from devin_janitor.cleanup import (
     CleanupRefused,
     apply_tier1,
@@ -25,13 +22,13 @@ from devin_janitor.cleanup import (
     verify_snapshot,
     vscdb_path,
 )
+from devin_janitor.cli import main
 from devin_janitor.labels import (
     automatic_sessions,
     bridge_state_dir,
     load_labels,
 )
 from devin_janitor.report import render_space_report, space_report
-from conftest import NOW_S, add_gui_session, add_session
 
 
 def _sha(path: Path) -> str:

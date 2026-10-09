@@ -75,7 +75,7 @@ def _install_cron(command: str, cron_tag: str) -> bool:
     # and makes the line-building logic untestable there.
     if not shutil.which("crontab"):
         return False
-    out = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+    out = subprocess.run(["crontab", "-l"], capture_output=True, text=True, check=False)
     current = out.stdout if out.returncode == 0 else ""
     kept = [l for l in current.splitlines() if cron_tag not in l]
     kept.append(f"@daily {command}  {cron_tag}")

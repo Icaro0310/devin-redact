@@ -29,7 +29,7 @@ def run_export(cmd: str | None, timeout: float = EXPORT_TIMEOUT_S) -> None:
     if not cmd:
         return
     try:
-        rc = subprocess.run(cmd, shell=True, timeout=timeout).returncode
+        rc = subprocess.run(cmd, shell=True, timeout=timeout, check=False).returncode
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise ExportError(f"export command failed to run: {exc}") from exc
     if rc != 0:

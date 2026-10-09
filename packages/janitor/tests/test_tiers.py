@@ -1,18 +1,16 @@
 import time
 
-import pytest
-
+from conftest import OLD_S, add_session
 from devin_janitor.config import JanitorConfig
 from devin_janitor.inventory import SessionRow, load_inventory
 from devin_janitor.tiers import Tier, classify, norm_title
-from conftest import NOW_S, OLD_S, add_session
 
 
 def mkrow(sid, **kw) -> SessionRow:
-    defaults = dict(
-        id=sid, origin="cli", title="", project="/p", created=OLD_S,
-        last_activity=OLD_S,
-    )
+    defaults = {
+        "id": sid, "origin": "cli", "title": "", "project": "/p",
+        "created": OLD_S, "last_activity": OLD_S,
+    }
     return SessionRow(**{**defaults, **kw})
 
 

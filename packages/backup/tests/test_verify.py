@@ -2,7 +2,6 @@ import json
 import sqlite3
 
 import pytest
-
 from devin_backup import snapshot, verify
 
 

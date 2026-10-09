@@ -15,7 +15,6 @@ from pathlib import Path
 
 import devin_redact
 from devin_redact.engine import _target_type
-
 from test_scan import FAKE_API_KEY, FAKE_GITHUB_TOKEN, _fp
 
 

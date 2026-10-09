@@ -13,9 +13,10 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from devin_internals.parsers import AcpMessagesStore, SessionsStore
 from devin_internals.schema import SchemaError
@@ -23,7 +24,7 @@ from devin_internals.schema import SchemaError
 from devin_janitor.paths import DevinPaths
 
 _MS = 1000.0
-_PATH_KEY_RE = re.compile(r"path|file", re.I)
+_PATH_KEY_RE = re.compile(r"path|file", re.IGNORECASE)
 _PATH_VALUE_RE = re.compile(r"[/\\][^/\\\s]+|^[A-Za-z]:[/\\]")
 
 

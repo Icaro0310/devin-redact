@@ -15,4 +15,4 @@ package = false
 members = ["packages/*", "shared/*"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.9"]

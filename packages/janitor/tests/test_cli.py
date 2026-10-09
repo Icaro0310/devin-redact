@@ -2,12 +2,10 @@ import hashlib
 import json
 import sqlite3
 import sys
-import textwrap
 
 import pytest
-
-from devin_janitor.cli import main
 from conftest import add_gui_session, add_session
+from devin_janitor.cli import main
 
 
 def _sha(path):

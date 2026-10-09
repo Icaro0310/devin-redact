@@ -8,13 +8,11 @@ char, and context keywords (``Bearer``, ``KEY=``, ``pairing code``)
 hugging the edge.
 """
 
-import hashlib
 import json
 import sqlite3
 from pathlib import Path
 
 import devin_redact
-
 from test_scan import FAKE_API_KEY, FAKE_JWT, _fp
 
 SCHEMA = """

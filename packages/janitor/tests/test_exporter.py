@@ -1,7 +1,6 @@
 import sys
 
 import pytest
-
 from devin_janitor.exporter import ExportError, run_export
 
 

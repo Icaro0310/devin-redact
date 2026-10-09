@@ -24,7 +24,6 @@ import socket
 from pathlib import Path
 
 import pytest
-
 from devin_redact import cli
 
 

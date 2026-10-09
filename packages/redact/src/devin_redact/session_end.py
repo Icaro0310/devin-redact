@@ -132,7 +132,7 @@ def run_hook(
         else:
             try:
                 report = engine.scan_session(db, sid)
-            except Exception as exc:  # fail-soft: never break teardown
+            except Exception as exc:  # noqa: BLE001 - fail-soft: never break teardown
                 verdict["reason"] = f"scan failed: {exc}"
             else:
                 verdict.update(

@@ -16,6 +16,7 @@ post-redact open test (rollback + restore on failure).
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -590,7 +591,7 @@ def _scan_chunked(
                 (str(f["category"]), str(f["fingerprint"])) for f in new
             }
             units.append((rowid, cells.get("session_id"), leaves, text, known))
-        for a, b in zip(units, units[1:]):
+        for a, b in itertools.pairwise(units):
             rid_a, sess_a, leaves_a, text_a, known_a = a
             rid_b, sess_b, leaves_b, text_b, known_b = b
             if has_session and session_id is None and (not sess_a or sess_a != sess_b):
@@ -1079,7 +1080,7 @@ def redact(paths, *, apply: bool = False, confirm_irreversible: bool = False) ->
             else:
                 _apply_text(path, plan["new_text"])
             result["backups"].append(str(path.with_name(path.name + ".bak")))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - collect per-file errors, keep applying
             errors.append({"file": str(path), "error": f"apply failed: {exc}"})
             result["applied_ok"] = False
     result.setdefault("applied_ok", not errors)

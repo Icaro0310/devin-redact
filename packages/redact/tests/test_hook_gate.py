@@ -15,7 +15,6 @@ from pathlib import Path
 
 import devin_redact
 from devin_redact import cli, paths
-
 from test_chunked import FAKE_AWS_KEY, _db, _node
 from test_scan import FIXTURES, PLANTED
 

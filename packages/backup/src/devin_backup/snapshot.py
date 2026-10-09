@@ -24,10 +24,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
-from devin_backup import identity
 from devin_internals.schema import SchemaError, detect_schema_version
 
-from devin_backup import __version__
+from devin_backup import __version__, identity
 from devin_backup.stores import DataDirError, Store, discover_stores
 
 MANIFEST_VERSION = 2

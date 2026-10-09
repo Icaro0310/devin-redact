@@ -1,8 +1,6 @@
-import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from devin_backup import cli, snapshot
 
 T0 = datetime(2026, 9, 29, 12, 0, 0, tzinfo=timezone.utc)

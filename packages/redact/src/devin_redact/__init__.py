@@ -1,5 +1,5 @@
 __version__ = "0.2.0"
 
-from .engine import redact, scan  # noqa: E402  (re-exported convenience API)
+from .engine import redact, scan
 
-__all__ = ["__version__", "scan", "redact"]
+__all__ = ["__version__", "redact", "scan"]

@@ -37,11 +37,11 @@ import sqlite3
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from audit_sessions import session_rows, gui_rows  # noqa: E402
+from audit_sessions import gui_rows, session_rows
 
 HOME = Path.home()
 DB = HOME / "AppData/Roaming/devin/cli/sessions.db"
@@ -61,13 +61,13 @@ NOISE_RE = re.compile(
     r"judge tool|classif|support_triage|entailment|^\[\d+\]$|^\{\"items\"|"
     r"^billing$|^BLOCKED$|SESSION_OK|echo.*test|sentinel|safe test command|"
     r"heartbeat-probe|Lista.*(tools|ferramentas).*djaevin-local|tools MCP.*djaevin-local",
-    re.I)
+    re.IGNORECASE)
 
 # Ciclos one-shot cujo conhecimento durável já vive noutro lado
 # (slack-brain sessions, heartbeat/state.json, vault, skills learned-*)
 EPHEMERAL_RE = re.compile(
     r"inbox|slack-bridge|slack bridge|Tarefa Slack|Processamento|"
-    r"Processar ficheiros|timeout ACP|heartbeat", re.I)
+    r"Processar ficheiros|timeout ACP|heartbeat", re.IGNORECASE)
 
 # Veredito do Djævin sobre sessões ambíguas
 JUDGE_STATEMENT = (
@@ -98,7 +98,7 @@ def load_keep() -> tuple[set, re.Pattern]:
         except (json.JSONDecodeError, OSError):
             pass
     pats += [r"n[ãa]o apagar", r"SLACK-BRAIN"]
-    return ids, re.compile("|".join(pats), re.I)
+    return ids, re.compile("|".join(pats), re.IGNORECASE)
 
 
 def load_pending() -> dict:
@@ -135,7 +135,7 @@ class DjævinJudge:
                 {"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
             self.proc.stdin.flush()
             self.available = True
-        except Exception:
+        except Exception:  # noqa: BLE001 - optional bridge, fail-soft
             self.available = False
 
     def _call(self, method, params):
@@ -165,7 +165,7 @@ class DjævinJudge:
                               "statement": JUDGE_STATEMENT}})
             txt = "".join(c.get("text", "") for c in res.get("content", []))
             return json.loads(txt)
-        except Exception:
+        except Exception:  # noqa: BLE001 - optional bridge, fail-soft
             self.available = False
             return None
 
@@ -260,9 +260,9 @@ def devin_running() -> bool:
     try:
         out = subprocess.run(
             ["tasklist", "/FI", "IMAGENAME eq Devin.exe", "/FO", "CSV"],
-            capture_output=True, text=True, timeout=20).stdout
+            capture_output=True, text=True, timeout=20, check=False).stdout
         return out.count("Devin.exe") > 1
-    except Exception:
+    except Exception:  # noqa: BLE001 - assume running when probe fails
         return True
 
 
@@ -301,8 +301,8 @@ def main() -> int:
                     judged_keep.append(r)
                 elif v.get("value") is False:
                     judged_del.append(
-                        (r, f"djævin: sem conhecimento durável "
-                            f"(p={v.get('prob_true')})"))
+                        (r, (f"djævin: sem conhecimento durável "
+                             f"(p={v.get('prob_true')})")))
                 else:
                     judged_keep.append(r)
             judge.close()
@@ -319,7 +319,7 @@ def main() -> int:
           f"(allowlist/graça/substantivo + {len(judged_keep)} julgadas úteis)")
     print(f"  apagar: {len(targets)}")
     for r, why in targets:
-        dt = datetime.fromtimestamp(r["created"]).strftime("%Y-%m-%d")
+        dt = datetime.fromtimestamp(r["created"], tz=timezone.utc).astimezone().strftime("%Y-%m-%d")
         print(f"    [{r['origin']}] {r['id'][:40]:40} {dt} {why:42} "
               f"{r['title'][:50]}")
 
@@ -332,7 +332,7 @@ def main() -> int:
     if not args.no_export:
         print("\n== export para Obsidian ==")
         rc = subprocess.run([sys.executable, str(EXPORTER)],
-                            timeout=900).returncode
+                            timeout=900, check=False).returncode
         if rc != 0:
             print("export falhou — aborto antes de apagar.", file=sys.stderr)
             return 3
@@ -347,9 +347,9 @@ def main() -> int:
                        (r["id"],)).fetchone():
             delete_cli(con, r["id"])
             n_cli += 1
-        if r["origin"] == "gui" or glob.glob(str(GUI_DIR / f"{r['id']}.db*")):
-            if delete_gui_files(r["id"], pending):
-                n_gui += 1
+        if (r["origin"] == "gui" or glob.glob(str(GUI_DIR / f"{r['id']}.db*"))) \
+                and delete_gui_files(r["id"], pending):
+            n_gui += 1
     # re-tentar ficheiros pendentes de corridas anteriores
     for sid in list(pending):
         delete_gui_files(sid, pending)

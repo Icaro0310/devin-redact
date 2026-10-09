@@ -130,6 +130,7 @@ class CommandJudge(Judge):
                 capture_output=True,
                 text=True,
                 shell=True,
+                check=False,
                 timeout=self.timeout,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
