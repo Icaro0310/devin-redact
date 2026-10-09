@@ -227,7 +227,7 @@ complement each other — pick the shape your hook needs.
 ## Publication gate for exports
 
 `devin-redact verify-publish <export-dir>` cross-references redaction
-findings with [`devin-history`](https://github.com/Icaro0310/devin-history)
+findings with [`devin-history`](https://github.com/Icaro0310/devin-explore)
 export state before anything is published. It enumerates the exported
 sessions — `index.json` (`{"sessions": [{"file": …}]}`) or `index.md`
 wikilinks when present, else the `<YYYY-MM-DD>_<session-id>.{md,json}`
@@ -250,8 +250,8 @@ Every file is dispatched by type — detected by extension **or** by content:
   the `SQLite format 3` magic header*) are opened read-only and every text
   column of every table is scanned. This covers Devin's `sessions.db` and
   `User/acp-messages/*.db`, plus the derived stores that inherit session
-  text: [`devin-graph`](https://github.com/Icaro0310/devin-graph)'s
-  `graph.db`, [`devin-search`](https://github.com/Icaro0310/devin-search)'s
+  text: [`devin-graph`](https://github.com/Icaro0310/devin-explore)'s
+  `graph.db`, [`devin-search`](https://github.com/Icaro0310/devin-explore)'s
   `search.db` (FTS5 `docs` included) and
   [`devin-memory`](https://github.com/Icaro0310/devin-brain)'s
   `memory.db`. On `sessions.db`-shaped data the tool-call semantic layer,
@@ -279,7 +279,7 @@ as `sessions.db`.
 
 The default `scan` is read-only and fully offline. `--apply` rewrites Devin's
 SQLite store in place — it writes `.bak` backups first, and running
-[`devin-backup`](https://github.com/Icaro0310/devin-backup) beforehand is the
+[`devin-backup`](https://github.com/Icaro0310/devin-state) beforehand is the
 recommended extra safety net. Detection is heuristic: review the report
 before applying.
 
@@ -341,7 +341,7 @@ always an explicit argument, so there are no platform-specific paths.
 - You want to stop secrets from entering transcripts in the first place —
   that is agent policy work, not redaction work.
 - You cannot accept a destructive write — `--apply` rewrites cells in
-  place; run [`devin-backup`](https://github.com/Icaro0310/devin-backup)
+  place; run [`devin-backup`](https://github.com/Icaro0310/devin-state)
   first and review the dry-run.
 
 ## FAQ

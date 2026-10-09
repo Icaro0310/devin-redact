@@ -6,12 +6,12 @@ devin-janitor solves the problem that daily Devin Desktop use accumulates sessio
 
 ## Docs
 
-- [README](https://github.com/Icaro0310/devin-janitor/blob/main/README.md): full documentation
-- [SPEC](https://github.com/Icaro0310/devin-janitor/blob/main/docs/SPEC.md): classification tiers and pipeline details
+- [README](https://github.com/Icaro0310/devin-state/blob/main/packages/janitor/README.md): full documentation
+- [SPEC](https://github.com/Icaro0310/devin-state/blob/main/packages/janitor/docs/SPEC.md): classification tiers and pipeline details
 
 ## Key commands
 
-- `pipx install "devin-janitor @ git+https://github.com/Icaro0310/devin-janitor.git"`: install (Python >= 3.10)
+- `pipx install "devin-janitor @ git+https://github.com/Icaro0310/devin-state.git#subdirectory=packages/janitor"`: install (Python >= 3.10)
 - `devin-janitor scan`: classification preview (`--json` for machine-readable)
 - `devin-janitor run`: dry-run; prints the exact plan, writes nothing
 - `devin-janitor run --apply --grace-hours 72 --export-cmd "devin-history export"`: safe recipe — archive transcripts, then delete safe tiers
@@ -27,6 +27,6 @@ devin-janitor solves the problem that daily Devin Desktop use accumulates sessio
 ## Related
 
 - [devin-ecosystem](https://icaro0310.github.io/): the tool ecosystem this belongs to
-- [devin-history](https://github.com/Icaro0310/devin-history): the export tool `--export-cmd` is designed to call before deletion
+- [devin-history](https://github.com/Icaro0310/devin-explore): the export tool `--export-cmd` is designed to call before deletion
 - [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): documents the stores and locks this operates on
 - [poordjaevin](https://github.com/Icaro0310/devin-judge): a Devin-native judge backend for ambiguous sessions via `--judge command:`

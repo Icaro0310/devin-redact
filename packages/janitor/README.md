@@ -2,16 +2,16 @@
 
 <img src="assets/banner.svg" alt="devin-janitor" width="100%"/>
 
-<a href="https://github.com/Icaro0310/devin-janitor/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-janitor/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
+<a href="https://github.com/Icaro0310/devin-state/actions/workflows/test-janitor.yml"><img src="https://github.com/Icaro0310/devin-state/actions/workflows/test-janitor.yml/badge.svg" alt="ci"/></a>
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-janitor"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-janitor/badge" alt="OpenSSF Scorecard"/></a>
 
 
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+"/></a>
-<a href="https://github.com/Icaro0310/devin-janitor"><img src="https://img.shields.io/github/stars/Icaro0310/devin-janitor" alt="GitHub stars"/></a>
-<a href="https://github.com/Icaro0310/devin-janitor/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-janitor" alt="Last commit"/></a>
+<a href="https://github.com/Icaro0310/devin-state"><img src="https://img.shields.io/github/stars/Icaro0310/devin-janitor" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/devin-state/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-janitor" alt="Last commit"/></a>
 <a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
-<a href="https://github.com/Icaro0310/devin-janitor/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
+<a href="https://github.com/Icaro0310/devin-state/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
 <!-- DEVIN-ECO:BEGIN -->
@@ -82,9 +82,9 @@ Requires Python ≥ 3.10 and `pipx` or `uv`. Per-OS setup lives in the platform 
 > Install from source:
 >
 > ```bash
-> pipx install git+https://github.com/Icaro0310/devin-janitor.git
+> pipx install git+https://github.com/Icaro0310/devin-state.git#subdirectory=packages/janitor
 > # or
-> uv tool install git+https://github.com/Icaro0310/devin-janitor.git
+> uv tool install git+https://github.com/Icaro0310/devin-state.git#subdirectory=packages/janitor
 > ```
 <!-- DIST-STATUS:END -->
 
@@ -122,7 +122,7 @@ by `report` and selectable via `run --tiers`:
 - **tier3 — GUI session state** (opt-in): `windsurfSpace.sessionWorkspace/*`
   keys in `state.vscdb`. Destructive — `run --apply --tiers 3` refuses
   unless you pass `--include-gui` **and** `--snapshot PATH` pointing at a
-  verified [`devin-backup`](https://github.com/Icaro0310/devin-backup)
+  verified [`devin-backup`](https://github.com/Icaro0310/devin-state)
   snapshot manifest younger than 24h that covers `state.vscdb`, and Devin
   must be closed. `--apply` is never scheduled — deletion stays manual.
 

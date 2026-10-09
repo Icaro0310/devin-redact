@@ -5,8 +5,8 @@ title: devin-janitor
 authors:
   - family-names: Galvao
     given-names: Icaro
-url: "https://github.com/Icaro0310/devin-janitor"
-repository-code: "https://github.com/Icaro0310/devin-janitor"
+url: "https://github.com/Icaro0310/devin-state"
+repository-code: "https://github.com/Icaro0310/devin-state"
 license: MIT
 abstract: "Lifecycle janitor for Devin sessions: export first, classify into tiers, delete only the safe tiers, retry locked files, and vacuum only when Devin is closed."
 keywords: [devin, session-lifecycle, cleanup, retention, sqlite, maintenance]

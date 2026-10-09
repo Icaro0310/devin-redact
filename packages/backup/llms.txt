@@ -6,12 +6,12 @@ devin-backup solves two failure modes of naive file-copy backups of Devin's loca
 
 ## Docs
 
-- [README](https://github.com/Icaro0310/devin-backup/blob/main/README.md): full documentation
-- [SPEC](https://github.com/Icaro0310/devin-backup/blob/main/docs/SPEC.md): canonical spec (manifest format, exit codes)
+- [README](https://github.com/Icaro0310/devin-state/blob/main/packages/backup/README.md): full documentation
+- [SPEC](https://github.com/Icaro0310/devin-state/blob/main/packages/backup/docs/SPEC.md): canonical spec (manifest format, exit codes)
 
 ## Key commands
 
-- `pipx install "devin-backup @ git+https://github.com/Icaro0310/devin-backup.git"`: install (Python >= 3.10)
+- `pipx install "devin-backup @ git+https://github.com/Icaro0310/devin-state.git#subdirectory=packages/backup"`: install (Python >= 3.10)
 - `devin-backup create [--data-dir DIR] [--config-dir DIR] [--out DIR]`: snapshot sessions.db, ACP message DBs, state.vscdb and .devin/ files
 - `devin-backup verify <snapshot-dir>`: re-check every hash + `PRAGMA integrity_check`; exit 1 on failure
 - `devin-backup list [--out DIR]`: list snapshots
@@ -28,4 +28,4 @@ devin-backup solves two failure modes of naive file-copy backups of Devin's loca
 - [devin-ecosystem](https://icaro0310.github.io/): the tool ecosystem this belongs to
 - [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): documents the stores this snapshots and provides schema detection
 - [devin-redact](https://github.com/Icaro0310/devin-state): recommended before running its `--apply` in-place redaction
-- [devin-janitor](https://github.com/Icaro0310/devin-janitor): lifecycle cleanup; a backup first is the sane recipe
+- [devin-janitor](https://github.com/Icaro0310/devin-state): lifecycle cleanup; a backup first is the sane recipe
