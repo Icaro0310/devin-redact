@@ -5,7 +5,6 @@
 <a href="https://github.com/Icaro0310/devin-state/actions/workflows/test-janitor.yml"><img src="https://github.com/Icaro0310/devin-state/actions/workflows/test-janitor.yml/badge.svg" alt="ci"/></a>
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-janitor"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-janitor/badge" alt="OpenSSF Scorecard"/></a>
 
-
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+"/></a>
 <a href="https://github.com/Icaro0310/devin-state"><img src="https://img.shields.io/github/stars/Icaro0310/devin-janitor" alt="GitHub stars"/></a>
@@ -22,7 +21,6 @@
 > Path: Operations · step 3/4 — after `devin-backup`, before `devin-metrics`  
 > Path: Security engineers · step 3/3 — after `devin-state`
 <!-- DEVIN-ECO:END -->
-
 
 # devin-janitor
 
@@ -76,17 +74,6 @@ adapts that pipeline; it does not reinvent deletion.
 ## Install
 
 Requires Python ≥ 3.10 and `pipx` or `uv`. Per-OS setup lives in the platform guides: [Linux](README.linux.md) · [Personal Windows](README.windows.md) · [Corporate Windows](README.corporate-windows.md).
-
-<!-- DIST-STATUS:BEGIN — generated from devin-powerups/registry.json -->
-> **Source-only distribution.** This tool is not yet published to PyPI.
-> Install from source:
->
-> ```bash
-> pipx install git+https://github.com/Icaro0310/devin-state.git#subdirectory=packages/janitor
-> # or
-> uv tool install git+https://github.com/Icaro0310/devin-state.git#subdirectory=packages/janitor
-> ```
-<!-- DIST-STATUS:END -->
 
 ## Usage
 
