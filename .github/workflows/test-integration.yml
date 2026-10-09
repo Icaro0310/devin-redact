@@ -32,4 +32,4 @@ jobs:
     with:
       package-dir: tests/integration
       skip-install: true
-      pre-install: -e packages/backup -e packages/janitor -e shared/install-scheduler
+      pre-install: pytest -e packages/backup -e packages/janitor -e shared/install-scheduler
