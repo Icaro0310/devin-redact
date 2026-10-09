@@ -1,5 +1,13 @@
 # devin-state
 
+<!-- DEVIN-ECO:BEGIN -->
+> **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
+> Track: Control · Nature: product  
+> For: Security engineers, Developers  
+> Interface: CLI / Python library  
+> Path: Security engineers · step 2/3 — after `devin-backup`, before `devin-janitor`
+<!-- DEVIN-ECO:END -->
+
 State safety for Devin Desktop: redact secrets from session stores, back
 them up verifiably, and prune sessions behind an export-then-delete
 pipeline.
