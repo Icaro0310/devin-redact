@@ -13,3 +13,6 @@ package = false
 
 [tool.uv.workspace]
 members = ["packages/*", "shared/*"]
+
+[dependency-groups]
+dev = ["pytest>=8"]

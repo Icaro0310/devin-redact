@@ -12,6 +12,7 @@ requires-python = ">=3.10"
 authors = [{ name = "Icaro0310" }]
 dependencies = [
     "devin-internals-spec>=0.3.0,<0.4.0",
+    "devin-install-scheduler>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -26,3 +27,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.uv.sources]
+devin-install-scheduler = { workspace = true }

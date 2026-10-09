@@ -13,6 +13,7 @@ import pytest
 
 from devin_internals.fixtures import STATE_VSCDB_DDL
 
+from devin_install_scheduler import install as _sched
 from devin_janitor import install
 from devin_janitor.cli import main
 from devin_janitor.cleanup import (
@@ -119,13 +120,13 @@ def test_install_bad_backend(tmp_path):
 
 def test_install_cron_tagged_line(tmp_path, monkeypatch):
     calls = []
-    monkeypatch.setattr(install.shutil, "which", lambda _c: "/usr/bin/crontab")
+    monkeypatch.setattr(_sched.shutil, "which", lambda _c: "/usr/bin/crontab")
 
     def fake_run(argv, **kw):
         calls.append((argv, kw))
         return subprocess.CompletedProcess(argv, 0, "", "")
 
-    monkeypatch.setattr(install.subprocess, "run", fake_run)
+    monkeypatch.setattr(_sched.subprocess, "run", fake_run)
     res = install.install_daily(config_dir=str(tmp_path / "cfg"),
                                 backend="cron")
     assert res["backend"] == "cron"
