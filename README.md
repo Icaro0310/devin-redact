@@ -1,5 +1,7 @@
 # devin-state
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15339/badge)](https://www.bestpractices.dev/projects/15339)
+
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
