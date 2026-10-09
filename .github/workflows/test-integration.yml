@@ -1,0 +1,35 @@
+name: test-integration
+
+# Cross-package contract tests (backup/janitor snapshot contract).
+# Runs when either side of the contract, the shared scheduler, or the
+# tests themselves change.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/backup/**'
+      - 'packages/janitor/**'
+      - 'shared/install-scheduler/**'
+      - 'tests/integration/**'
+      - '.github/workflows/test-integration.yml'
+  pull_request:
+    paths:
+      - 'packages/backup/**'
+      - 'packages/janitor/**'
+      - 'shared/install-scheduler/**'
+      - 'tests/integration/**'
+      - '.github/workflows/test-integration.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: Icaro0310/devin-powerups/.github/workflows/python-test.yml@v1
+    with:
+      package-dir: tests/integration
+      skip-install: true
+      pre-install: -e packages/backup -e packages/janitor -e shared/install-scheduler

@@ -1,0 +1,26 @@
+name: test-backup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/backup/**'
+      - 'shared/install-scheduler/**'
+      - '.github/workflows/test-backup.yml'
+  pull_request:
+    paths:
+      - 'packages/backup/**'
+      - 'shared/install-scheduler/**'
+      - '.github/workflows/test-backup.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: Icaro0310/devin-powerups/.github/workflows/python-test.yml@v1
+    with:
+      package-dir: packages/backup
+      pre-install: -e shared/install-scheduler

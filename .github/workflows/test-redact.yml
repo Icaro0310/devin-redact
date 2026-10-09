@@ -1,0 +1,23 @@
+name: test-redact
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/redact/**'
+      - '.github/workflows/test-redact.yml'
+  pull_request:
+    paths:
+      - 'packages/redact/**'
+      - '.github/workflows/test-redact.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: Icaro0310/devin-powerups/.github/workflows/python-test.yml@v1
+    with:
+      package-dir: packages/redact
