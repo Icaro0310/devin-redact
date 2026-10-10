@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI `sessionend-scan`: the `scan` invocation shaped for the
   `SessionEnd` hook (RD-1). Scan-only, bounded to the auto-detected
   default `sessions.db` (optional explicit path), prints one compact
+  verdict line (`devin-redact: findings=N publication_status=X`), exits
+  0 even on `BLOCKED` — non-zero (2) only on hard error. Registration
+  documented in `docs/HOOKS.md` with the `hooks.json` entry for the
+  planned `devin-powerups` hook dispatcher.
 - Read-only adapters: `devin_redact.mcp_server` MCP server
   (`redact_scan` + `redact_verify_publish`, `devin-redact-mcp` entry
   point, `mcp` extra), Devin skill and `adapters/` plugin root. Session
@@ -35,10 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sessions as `no_session` instead of `CLEAN`, and surface missing scan
   targets as `missing_paths`/`no_targets` rather than silently scanning
   zero files.
-  verdict line (`devin-redact: findings=N publication_status=X`), exits
-  0 even on `BLOCKED` — non-zero (2) only on hard error. Registration
-  documented in `docs/HOOKS.md` with the `hooks.json` entry for the
-  planned `devin-powerups` hook dispatcher.
 - CLI `gate`: machine gate for pipelines like `devin-history` (RD-4).
   Prints just the `publication_status` word; exits 0 for CLEAN/REVIEW,
   1 for BLOCKED, 2 on error.

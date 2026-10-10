@@ -285,7 +285,7 @@ before applying.
 ## Adapters (MCP server, Devin skill, plugin)
 
 `devin_redact.mcp_server` exposes the read-only half of the CLI as MCP
-tools — `redact_scan` (same JSON as `scan --json`) and
+tools — `redact_scan` (same JSON `scan` prints by default) and
 `redact_verify_publish` (same as `verify-publish --json`) — via the
 `devin-redact-mcp` entry point (`pip install 'devin-redact[mcp]'`). The
 `adapters/` directory is a self-contained Devin plugin root
