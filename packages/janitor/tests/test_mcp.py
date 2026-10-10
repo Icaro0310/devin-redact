@@ -78,6 +78,32 @@ def test_do_dry_run_matches_report_json(noisy_dir, tmp_path, capsys):
     assert out == expected
 
 
+def test_do_dry_run_defaults_load_bundled_keep_and_pending_files(
+        noisy_dir, tmp_path, capsys, monkeypatch):
+    """With no keep_file/pending_file args, DEFAULT_KEEP_FILE /
+    DEFAULT_PENDING_FILE (relative to cwd) feed the report exactly as
+    `report --json` resolves them — and they must change the result:
+    the keep file protects the deletable noise session, the pending
+    queue marks the keeper's bytes recoverable."""
+    monkeypatch.chdir(tmp_path)
+    dotdevin = tmp_path / ".devin"
+    dotdevin.mkdir()
+    (dotdevin / "janitor-keep.json").write_text(
+        json.dumps({"ids": ["noise-1"]}), encoding="utf-8")
+    (dotdevin / "janitor-pending.json").write_text(
+        json.dumps({"work-1": 1_700_000_000}), encoding="utf-8")
+
+    expected = _cli_json(capsys, [
+        "report", "--data-dir", str(noisy_dir.root), "--json"])
+    out = do_dry_run(data_dir=str(noisy_dir.root))
+    out.pop("generated_at")
+    expected.pop("generated_at")
+    assert out == expected
+    # both defaults bit: noise-1 kept (not deletable), work-1 queued
+    sess = next(s for s in out["stores"] if s["name"] == "sessions.db")
+    assert sess["deletable_sessions"] == 1  # only the queued work-1
+
+
 def test_do_dry_run_unreadable_store_degrades_like_cli(devin_dir):
     """`report` is advisory and must never fail: a corrupt store yields
     the same degraded payload the CLI prints, not an exception."""

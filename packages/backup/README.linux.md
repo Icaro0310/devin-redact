@@ -54,8 +54,11 @@ Equivalent `systemd --user` timer works too; enable lingering if it must run wit
 - Devin plugin + skill: `devin plugins install
   Icaro0310/devin-state#packages/backup/adapters`. The manifest
   launches the server through `uvx --from 'devin-backup[mcp]' devin-backup-mcp`, which
-  resolves once the next PyPI release ships — until then install from
-  source (`pip install -e 'packages/backup[mcp]'` from a checkout).
+  resolves once the next PyPI release ships. Until then, an
+  editable install does not change what `uvx --from` resolves —
+  either run the source-installed `devin-backup-mcp` directly, or
+  point a local manifest copy at the checkout:
+  `uvx --from './packages/backup[mcp]' devin-backup-mcp`.
 
 ## Troubleshooting
 
