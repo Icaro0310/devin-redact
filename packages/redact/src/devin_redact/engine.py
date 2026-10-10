@@ -63,6 +63,28 @@ def _line_of(text: str, offset: int) -> int:
 _CODE_VALUE_RE = re.compile(
     r"^\s*(?:[(\[{]|[A-Za-z_][\w.]*\s*\()"
 )
+_STR_PREFIX_RE = re.compile(r"^[rRuUbBfF]{0,3}(['\"])")
+
+
+def _paren_wrapped_string_literal(rhs: str) -> bool:
+    """True when ``rhs`` is a single string literal wrapped only in
+    parentheses — ``("hunter2")``, ``((b'tok'))``.
+
+    Parentheses group but do not contain: ``("x")`` evaluates to the
+    string ``"x"``, so this shape is a hardcoded value, not a code
+    expression. Tuples/comprehensions inside parens (``('a', 'b')``),
+    real containers (``['x']``, ``{'k': 'v'}``) and calls still count
+    as code.
+    """
+    s = rhs.strip()
+    while s.startswith("(") and s.endswith(")"):
+        s = s[1:-1].strip()
+    m = _STR_PREFIX_RE.match(s)
+    if not m or len(s) <= m.end() or not s.endswith(m.group(1)):
+        return False
+    # A quote of the same kind inside means separate literals —
+    # e.g. ('a', 'b') is a tuple, not one value.
+    return m.group(1) not in s[m.end() : -1]
 
 
 def _looks_like_code_assignment(whole: str) -> bool:
@@ -78,12 +100,17 @@ def _looks_like_code_assignment(whole: str) -> bool:
     (``(``, ``[``, ``{``) or a call (``name(``): real env values are
     bare or quoted tokens, never code expressions. Literal string
     values — the only shape that can be a real hardcoded secret — are
-    still flagged.
+    still flagged, including when merely wrapped in parentheses
+    (``PASSWORD = ("hunter2")``), since parens alone do not build a
+    container.
     """
     eq = whole.find("=")
     if eq == -1:
         return False
-    return bool(_CODE_VALUE_RE.match(whole[eq + 1 :]))
+    rhs = whole[eq + 1 :]
+    if not _CODE_VALUE_RE.match(rhs):
+        return False
+    return not _paren_wrapped_string_literal(rhs)
 
 
 def _iter_matches(text: str):

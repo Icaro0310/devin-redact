@@ -205,3 +205,28 @@ def test_env_assignment_still_flags_real_values():
     findings = scan_text(code, file=".env", location="text")
     env = [f for f in findings if f["category"] == "env_assignment"]
     assert len(env) == 4
+
+
+def test_env_assignment_flags_parenthesized_string_literal():
+    """Regression: ``KEY = ("secret")`` is a string literal, not a code
+    expression — parens group, they do not contain. Previously the
+    code-assignment guard suppressed it and the gate went CLEAN."""
+    findings = scan_text(
+        'DB_PASSWORD = ("hunter' + '2fake")\n',
+        file=".env",
+        location="text",
+    )
+    env = [f for f in findings if f["category"] == "env_assignment"]
+    assert len(env) == 1
+
+
+def test_env_assignment_still_suppresses_paren_code():
+    """Parenthesized *expressions* (tuples, calls) remain suppressed —
+    only a lone string literal inside parens flags."""
+    code = (
+        "API_TOKENS = ('keep', 'true')\n"
+        "DB_PASSWORD = (get_secret())\n"
+    )
+    findings = scan_text(code, file="x.py", location="text")
+    env = [f for f in findings if f["category"] == "env_assignment"]
+    assert env == [], env
