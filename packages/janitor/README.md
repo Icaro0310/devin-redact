@@ -18,8 +18,7 @@
 > Track: Control · Nature: product  
 > For: Operations, Security engineers  
 > Interface: CLI / Automation  
-> Path: Operations · step 3/4 — after `devin-backup`, before `devin-metrics`  
-> Path: Security engineers · step 3/3 — after `devin-state`
+> Path: Operations · step 3/4 — after `devin-backup`, before `devin-metrics`
 <!-- DEVIN-ECO:END -->
 
 # devin-janitor
