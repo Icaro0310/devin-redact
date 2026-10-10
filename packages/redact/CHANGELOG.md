@@ -80,6 +80,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `llms.txt` no longer states a hard-coded ecosystem size; the registry owns the count.
 - Platform guides and the README install command no longer pin a release; they install the latest published version.
 
+## [0.2.1] - 2026-10-10
+
+### Fixed
+
+- `env_assignment` no longer fires when the matched name is bound to a
+  code expression — `_STRUCTURAL_KEYS = frozenset({...})`,
+  `TOKEN_RE = re.compile(...)`, `SECRET_PATTERNS = [...]`. The pattern
+  anchors on KEY/SECRET/TOKEN-carrying names, which made any repo
+  holding scanner configs, env parsers or policy generators (including
+  this package's own source and devin-janitor's regexes) gate BLOCKED.
+  Suppression covers only right-hand sides that are container literals
+  or calls — shapes an env value can never take; bare and quoted values
+  still flag, so private constants holding real secrets remain caught.
+  Applies to scan and redact identically via `_iter_matches`.
+
 ## [0.2.0] - 2026-09-29
 
 ### Added
