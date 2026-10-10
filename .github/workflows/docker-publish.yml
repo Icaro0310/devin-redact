@@ -15,12 +15,21 @@ permissions:
 
 jobs:
   redact:
+    # workflow_run only proceeds for redact-v* tag runs: backup/janitor/
+    # scheduler releases would otherwise rebuild and repush this image.
+    # Dispatch-triggered redact publishes can be followed by a manual
+    # docker-publish run.
     if: >-
       github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'redact-v'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          # workflow_run carries the released commit in head_sha; checking
+          # out the default branch there could build the wrong revision.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
       - name: Resolve package version
         id: v
         # On PRs the pyproject may hold a not-yet-published bump
@@ -54,4 +63,9 @@ jobs:
             ghcr.io/icaro0310/devin-redact:${{ steps.v.outputs.version }}
             ghcr.io/icaro0310/devin-redact:latest
       - name: Smoke
-        run: docker run --rm ghcr.io/icaro0310/devin-redact:latest --help
+        run: |
+          docker run --rm ghcr.io/icaro0310/devin-redact:latest --help
+          mkdir -p "$RUNNER_TEMP/fixture"
+          echo "hello world" > "$RUNNER_TEMP/fixture/a.txt"
+          docker run --rm -v "$RUNNER_TEMP/fixture:/work" \
+            ghcr.io/icaro0310/devin-redact:latest scan /work
