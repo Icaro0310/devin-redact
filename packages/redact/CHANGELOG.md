@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ghcr.io/icaro0310/devin-redact` container image: the `devin-redact`
+  CLI on `python:3.12-slim` running as a non-root user, published after
+  each `redact-v*` release.
 - `devin_redact.paths`: default `sessions.db` discovery matching the
   ecosystem convention (`%APPDATA%\devin\cli\sessions.db`,
   `~/Library/Application Support/…`, `$XDG_DATA_HOME`/`$XDG_CONFIG_HOME`/`~`
