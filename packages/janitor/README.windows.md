@@ -46,6 +46,16 @@ schtasks /create /tn "devin-janitor" /tr "devin-janitor run --apply" /sc daily /
 Runs under your account — no admin needed. Adjust `/sc`/`/st` (or `/sc onlogon` for daemons) to taste.
 
 
+## Adapters (MCP / Devin skill / plugin)
+
+- MCP server: `pip install 'devin-janitor[mcp]'` then run `devin-janitor-mcp` (stdio).
+  Read-only tools only.
+- Devin plugin + skill: `devin plugins install
+  Icaro0310/devin-state#packages/janitor/adapters`. The manifest
+  launches the server through `uvx --from 'devin-janitor[mcp]' devin-janitor-mcp`, which
+  resolves once the next PyPI release ships — until then install from
+  source (`pip install -e 'packages/janitor[mcp]'` from a checkout).
+
 ## Troubleshooting
 
 - If a command is not found, reopen PowerShell and run `uv tool update-shell`.

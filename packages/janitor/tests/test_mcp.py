@@ -98,12 +98,21 @@ def test_do_classify_bad_store_maps_to_error(devin_dir):
 
 def test_module_never_touches_mutation_surface():
     """Read-only contract: no reference — not even an import — to the
-    modules whose only purpose is to delete, retry, export or schedule."""
+    modules whose only purpose is to delete, retry, export or schedule.
+
+    Exception: ``execute.load_pending`` is the read side of the pending
+    retry queue — the CLI's ``report`` folds those ids into recoverable
+    bytes, so the MCP surface imports it for parity. Every other symbol
+    in ``execute`` (and the whole mutation path) stays banned.
+    """
     src = (Path(__file__).parents[1] / "src" / "devin_janitor"
            / "mcp_server.py").read_text(encoding="utf-8")
-    for mod in ("execute", "cleanup", "install", "exporter", "judge"):
+    for mod in ("cleanup", "install", "exporter", "judge"):
         assert f"devin_janitor.{mod}" not in src
         assert f"devin_janitor import {mod}" not in src
+    import re
+    assert not re.search(
+        r"devin_janitor\.execute import (?!load_pending\b)", src)
     for banned in ("--apply", "--yes", "vacuum", "save_pending",
                    "apply_tier", "apply_deletions", "restore"):
         assert banned not in src

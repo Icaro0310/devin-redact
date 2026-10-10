@@ -47,6 +47,16 @@ _Nightly snapshot; pair with a weekly `devin-backup rotate --keep 10 --yes`. Or 
 Equivalent `systemd --user` timer works too; enable lingering if it must run without a login session.
 
 
+## Adapters (MCP / Devin skill / plugin)
+
+- MCP server: `pip install 'devin-backup[mcp]'` then run `devin-backup-mcp` (stdio).
+  Read-only tools only.
+- Devin plugin + skill: `devin plugins install
+  Icaro0310/devin-state#packages/backup/adapters`. The manifest
+  launches the server through `uvx --from 'devin-backup[mcp]' devin-backup-mcp`, which
+  resolves once the next PyPI release ships — until then install from
+  source (`pip install -e 'packages/backup[mcp]'` from a checkout).
+
 ## Troubleshooting
 
 - If a command is not found, ensure the `uv` tools directory is on `PATH` and run `uv tool update-shell`.

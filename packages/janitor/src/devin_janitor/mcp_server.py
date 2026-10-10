@@ -18,10 +18,14 @@ from dataclasses import asdict
 from pathlib import Path
 
 from devin_janitor.config import JanitorConfig
+from devin_janitor.execute import load_pending
 from devin_janitor.inventory import load_inventory
 from devin_janitor.paths import resolve
 from devin_janitor.report import space_report
 from devin_janitor.tiers import classify, load_keep_file
+
+DEFAULT_KEEP_FILE = ".devin/janitor-keep.json"
+DEFAULT_PENDING_FILE = ".devin/janitor-pending.json"
 
 
 def _resolve_paths(
@@ -44,7 +48,7 @@ def _resolve_paths(
 def _cfg(config: str, keep_file: str):
     cfg = JanitorConfig.load(Path(config).expanduser() if config else None)
     keep_ids, keep_patterns = load_keep_file(
-        Path(keep_file).expanduser() if keep_file else None
+        Path(keep_file).expanduser() if keep_file else DEFAULT_KEEP_FILE
     )
     return cfg, keep_ids, keep_patterns
 
@@ -64,6 +68,7 @@ def do_dry_run(
     locks_dir: str = "",
     config: str = "",
     keep_file: str = "",
+    pending_file: str = "",
     labels_file: str = "",
     exclude_labeled: bool = False,
 ) -> dict:
@@ -79,12 +84,17 @@ def do_dry_run(
     """
     paths = _resolve_paths(data_dir, config_dir, sessions_db, acp_dir, locks_dir)
     cfg, keep_ids, keep_patterns = _cfg(config, keep_file)
+    pending = load_pending(
+        Path(pending_file).expanduser() if pending_file
+        else DEFAULT_PENDING_FILE
+    )
     try:
         return space_report(
             paths,
             cfg,
             keep_ids=keep_ids,
             keep_patterns=keep_patterns,
+            extra_delete_ids=set(pending),
             labels_path=Path(labels_file).expanduser()
             if labels_file else None,
             exclude_labeled=exclude_labeled,
@@ -185,6 +195,7 @@ def build_server():
         locks_dir: str = "",
         config: str = "",
         keep_file: str = "",
+        pending_file: str = "",
         labels_file: str = "",
         exclude_labeled: bool = False,
     ) -> dict:
@@ -203,6 +214,7 @@ def build_server():
                 locks_dir=locks_dir,
                 config=config,
                 keep_file=keep_file,
+                pending_file=pending_file,
                 labels_file=labels_file,
                 exclude_labeled=exclude_labeled,
             )
