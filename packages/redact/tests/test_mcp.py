@@ -111,7 +111,14 @@ def test_server_entrypoint_in_pyproject():
 def test_build_server_registers_tool():
     pytest.importorskip("mcp")
     from devin_redact.mcp_server import build_server
-    assert build_server() is not None
+
+    server = build_server()
+    mgr = getattr(server, "_tool_manager", None) or getattr(
+        server, "tools", None)
+    assert mgr is not None
+    tools = getattr(mgr, "_tools", mgr)
+    if isinstance(tools, dict):
+        assert set(tools) == {"redact_scan", "redact_verify_publish"}
 
 
 def _registered_tool_names() -> set[str]:
@@ -138,7 +145,9 @@ def _registered_tool_names() -> set[str]:
 
 
 def test_mcp_tool_surface_is_pinned():
-    """Regression contract: the AI surface is exactly this set. A new
-    tool only lands after a deliberate edit here — check it stays
-    read-only before widening."""
+    """Regression contract: the AI surface is exactly this set. Static by
+    design so it runs without the ``mcp`` extra; the runtime registry is
+    pinned separately by test_build_server_registers_tool. A new tool
+    only lands after a deliberate edit here — check it stays read-only
+    before widening."""
     assert _registered_tool_names() == {"redact_scan","redact_verify_publish"}
