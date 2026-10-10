@@ -18,7 +18,7 @@
 > Track: Control · Nature: product  
 > For: Security engineers, Developers, DevOps engineers  
 > Interface: CLI / Python library  
-> Path: DevOps engineers · step 1/3 — before `devin-control`
+> Path: DevOps engineers · step 1/3 — before `devin-bridge`
 <!-- DEVIN-ECO:END -->
 
 <!-- DEVIN-WHERE:BEGIN -->

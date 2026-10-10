@@ -17,9 +17,9 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
-> For: Operations, Security engineers  
+> For: Local-first ops, Security engineers  
 > Interface: CLI  
-> Path: Operations · step 2/4 — after `devin-explore`, before `devin-janitor`
+> Path: Local-first ops · step 4/5 — after `devin-office`, before `devin-janitor`
 <!-- DEVIN-ECO:END -->
 
 
