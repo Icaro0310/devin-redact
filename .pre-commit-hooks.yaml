@@ -2,8 +2,11 @@
   name: devin-redact secret scan
   description: >-
     Gate staged files with `devin-redact gate`: exits non-zero when the
-    scan verdict is BLOCKED, so secrets never reach the commit. The hook
-    only scans — redaction is never applied automatically; fix findings
+    scan verdict is BLOCKED, so secrets never reach the commit. While
+    the hook runs, pre-commit has already stashed unstaged changes, so
+    the files on disk are exactly the versions being committed — the
+    scan never sees a tree that differs from the index. The hook only
+    scans — redaction is never applied automatically; fix findings
     manually from the CLI.
   entry: devin-redact gate
   language: system
