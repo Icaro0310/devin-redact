@@ -60,6 +60,32 @@ def _line_of(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
+_CODE_VALUE_RE = re.compile(
+    r"^\s*(?:[(\[{]|[A-Za-z_][\w.]*\s*\()"
+)
+
+
+def _looks_like_code_assignment(whole: str) -> bool:
+    """False-positive guard for ``env_assignment`` matches.
+
+    The pattern anchors on names containing KEY/SECRET/TOKEN/etc., which
+    also matches code constants — ``_STRUCTURAL_KEYS = frozenset({...})``,
+    ``TOKEN_RE = re.compile(...)``, ``SECRET_PATTERNS = [...]``. A repo
+    holding scanner configs, env parsers or policy generators hits this
+    on every gate run, including devin-redact's own source.
+
+    Suppress when the right-hand side is a container literal
+    (``(``, ``[``, ``{``) or a call (``name(``): real env values are
+    bare or quoted tokens, never code expressions. Literal string
+    values — the only shape that can be a real hardcoded secret — are
+    still flagged.
+    """
+    eq = whole.find("=")
+    if eq == -1:
+        return False
+    return bool(_CODE_VALUE_RE.match(whole[eq + 1 :]))
+
+
 def _iter_matches(text: str):
     """Yield ``(category, pattern_name, match)`` for every pattern hit."""
     for category, regexes in PATTERNS.items():
@@ -67,6 +93,11 @@ def _iter_matches(text: str):
             for m in rx.finditer(text):
                 if _REDACTED_TAG in m.group(0):
                     # Already redacted — don't double-report/re-redact.
+                    continue
+                if (
+                    category == "env_assignment"
+                    and _looks_like_code_assignment(m.group(0))
+                ):
                     continue
                 yield category, pattern_name(category, index), m
 
