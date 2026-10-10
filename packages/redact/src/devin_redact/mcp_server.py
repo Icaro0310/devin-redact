@@ -1,8 +1,9 @@
 """devin-redact as an MCP server: the ``scan`` report exposed as a tool.
 
-One tool, ``redact_scan`` — scans files or a sessions.db for secrets/PII
-and returns the same JSON report as ``devin-redact scan``. Read-only by
-design: the redaction engine's ``redact --apply`` path is a destructive,
+Two read-only tools: ``redact_scan`` scans files or a sessions.db for
+secrets/PII and returns the same JSON report as ``devin-redact scan``;
+``redact_verify_publish`` cross-references an export with its verdicts.
+Read-only by design: the redaction engine's ``redact --apply`` path is a destructive,
 human-confirmed operation and is deliberately NOT exposed here — an MCP
 client can detect and report findings, never rewrite a store.
 
@@ -15,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from devin_redact import engine, paths
+from devin_redact import engine, paths, publish
 
 
 def do_scan(
@@ -26,16 +27,24 @@ def do_scan(
     """Scan targets and return the ``scan --json`` report as a dict.
 
     ``session_id`` scopes the scan to one session's rows in a
-    sessions.db (explicit ``sessions_db`` or auto-detected). Without it,
-    ``scan_paths`` are scanned; with neither, the default sessions.db is
-    the target — the same auto-detect the CLI hooks use.
+    sessions.db (explicit ``sessions_db``, first ``scan_paths`` entry or
+    auto-detected). Without it, ``scan_paths`` are scanned; with neither,
+    the default sessions.db is the target — the same auto-detect the CLI
+    hooks use.
     """
     if session_id:
-        db = Path(sessions_db).expanduser() if sessions_db else (
-            paths.default_sessions_db())
+        if sessions_db:
+            db = Path(sessions_db).expanduser()
+        elif scan_paths:
+            db = Path(scan_paths[0]).expanduser()
+        else:
+            db = paths.default_sessions_db()
         if db is None or not db.is_file():
             return {"error": "no_store",
                     "detail": f"sessions.db not found: {db}"}
+        if engine.session_exists(db, session_id) is False:
+            return {"error": "no_session",
+                    "detail": f"session {session_id!r} not found in {db}"}
         return engine.scan_session(db, session_id)
 
     targets = [Path(p).expanduser() for p in (scan_paths or [])]
@@ -47,7 +56,27 @@ def do_scan(
                     "detail": f"sessions.db not found: {db} "
                     "(pass scan_paths or sessions_db)"}
         targets = [db]
-    return engine.scan(targets)
+    missing = [str(p) for p in targets if not p.exists()]
+    existing = [p for p in targets if p.exists()]
+    if not existing:
+        return {"error": "no_targets",
+                "detail": "none of the scan targets exist",
+                "missing_paths": missing}
+    report = engine.scan(existing)
+    if missing:
+        report["missing_paths"] = missing
+    return report
+
+
+def do_verify(export_dir: str, verdicts_dir: str = "") -> dict:
+    """Cross-reference a store export with its redaction verdicts —
+    ``publish.verify_publish`` semantics. Read-only."""
+    ed = Path(export_dir).expanduser()
+    if not ed.is_dir():
+        return {"error": "no_export_dir",
+                "detail": f"not a directory: {ed}"}
+    vd = Path(verdicts_dir).expanduser() if verdicts_dir else None
+    return publish.verify_publish(ed, verdicts_dir=vd)
 
 
 def _err(error: Exception) -> dict:
@@ -98,6 +127,17 @@ def build_server():
                 sessions_db=sessions_db,
                 session_id=session_id,
             )
+        except Exception as error:  # noqa: BLE001 — tool boundary must not raise
+            return _err(error)
+
+    @server.tool()
+    def redact_verify_publish(export_dir: str, verdicts_dir: str = "") -> dict:
+        """Verify a store export against its redaction verdicts — the same
+        result as ``devin-redact verify``. Read-only — reports whether the
+        export is safe to publish, never rewrites anything.
+        """
+        try:
+            return do_verify(export_dir, verdicts_dir)
         except Exception as error:  # noqa: BLE001 — tool boundary must not raise
             return _err(error)
 

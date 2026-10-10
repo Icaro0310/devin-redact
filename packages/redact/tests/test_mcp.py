@@ -55,6 +55,41 @@ def test_do_scan_session_missing_db_is_error(tmp_path):
     assert out["error"] == "no_store"
 
 
+def test_do_scan_session_db_via_scan_paths():
+    out = do_scan(
+        scan_paths=[str(FIXTURES / "sessions.db")],
+        session_id="fixture-session-0001",
+    )
+    assert out["session_id"] == "fixture-session-0001"
+
+
+def test_do_scan_session_unknown_is_error():
+    out = do_scan(
+        sessions_db=str(FIXTURES / "sessions.db"),
+        session_id="no-such-session",
+    )
+    assert out["error"] == "no_session"
+
+
+def test_do_scan_missing_targets_is_error(tmp_path):
+    out = do_scan(scan_paths=[str(tmp_path / "gone.txt")])
+    assert out["error"] == "no_targets"
+    assert out["missing_paths"]
+
+
+def test_do_scan_partial_missing_surfaces(tmp_path):
+    out = do_scan(
+        scan_paths=[str(BENIGN), str(tmp_path / "gone.txt")])
+    assert out["missing_paths"]
+    assert out["files_scanned"] == 1
+
+
+def test_do_verify_missing_dir_is_error(tmp_path):
+    from devin_redact.mcp_server import do_verify
+    out = do_verify(str(tmp_path / "nope"))
+    assert out["error"] == "no_export_dir"
+
+
 def test_server_exposes_scan_only():
     """The module must not reference the mutation path at all."""
     src = (Path(__file__).parents[1] / "src" / "devin_redact"
